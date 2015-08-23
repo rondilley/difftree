@@ -1,0 +1,28 @@
+Version 0.1 (Jun 21, 2011):
+
+* First public release.
+
+Version 0.2 (Jun 24, 2011):
+
+* Minor bug fixes
+* Added support to detect deleted files in one pass
+* Added the ability to diff more than two directory trees
+
+Version 0.3 (Jun 27, 2011):
+
+* Added support for more difference tests and a quick (-q) mode
+
+Version 0.4 (July 11, 2011):
+
+* Added md5 support
+
+Version 0.5 (July 17, 2011):
+
+* Minor bug fixes and porting
+* Fixed several memory leaks in the hash code
+* Added ability to save directory metadata
+* Added ability to load previous saves
+
+Version 0.5.2 (October 21, 2011):
+
+* Minor bug fixes

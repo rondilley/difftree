@@ -1,0 +1,35 @@
+2011-06-21  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Initial public release.
+
+2011-06-24  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Added ability to detect deleted files in a single pass
+	* Added ability to pass multiple directories and diff between all
+	* Added more diff tests and included quick (-q) mode
+
+2011-06-27  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Improved hashing function performance
+	* Added dynamic growth of hashes
+
+2011-07-11  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Added hashing (-m) option
+
+2011-07-17  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Ported to openBSD
+	* Ported to freeBSD
+	* Ported to Cygwin
+	* Enabled md5 hashing
+
+2011-07-24  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Added support for writing data to file
+	* Added support for reading data from file
+	* Fixed several memory leaks
+
+2011-10-21  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* refined file parser code

@@ -1,0 +1,79 @@
+.TH DT 1  "19 June 2011" "dt @VERSION@" "dt @VERSION@"
+.SH NAME
+dt \- Diff directory tree.
+.SH SYNOPSIS
+.na
+.B dt
+[
+.B \-hv
+] [
+.B \-d
+.I log\-level
+] [
+.B \-l
+.I log\-dir
+] [
+.B \-q
+]
+.SH DESCRIPTION
+.LP
+.B \fldt\fP is a simple command line utility to quickly identify changes to two or more directory trees.
+.SH OPTIONS
+.TP
+.B \-d
+Enable debug mode, the higher the \fllog\-level\fP, the more verbose the logging.
+.TP
+.B \-h
+Display help details.
+.TP
+.B \-l
+Place log files in \fllog\-dir\fP.
+.TP
+.B \-v
+Show version information.
+.TP
+.B \-q
+Enable quick mode.
+
+.SH DIAGNOSTICS
+\fldt\fP returns 0 on normal program termination and 1 on error.  Additional diagnostic information is available through the \-d command line switch.
+
+.SH SIGNALS
+.TP
+.B \flSIGHUP\fP will cause \fldt\fP to close the current logfile, then start a new logfile.
+.TP
+.B \flSIGTERM\fP will cause \fldt\fP to shutdown.
+.SH FILES
+.TP
+.B /var/log/dt/
+
+.SH SEE ALSO
+
+.SH COPYRIGHT
+dt is Copyright (c) 2011 Ron Dilley.
+
+This program is free software; you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published 
+by the Free Software Foundation; either version 2 of the License, 
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, 
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License 
+along with this program; if not, write to the Free Software 
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, 
+MA 02111-1307 USA.
+
+.SH BUGS
+Please send problems, bugs, questions, desirable enhancements, etc. to:
+dt-workers@uberadmin.com
+
+Please send source code contributions, etc. to:
+dt-patches@uberadmin.com
+
+There are no documented bugs at this time.
+.SH AUTHORS
+Ron Dilley e-mail: ron.dilley@uberadmin.com

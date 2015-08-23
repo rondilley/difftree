@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo "dt - bootstrap"
+aclocal
+automake --gnu --add-missing
+autoheader
+autoconf
+

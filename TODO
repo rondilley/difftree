@@ -1,0 +1,12 @@
+difftree TODO list
+==============
+
+Short-term:
+-----------
+* port to MinGW
+* add support for fts instead of nftw
+
+Long-term:
+----------
+* add checksumming of file saved with -w
+* add client/server functionality
