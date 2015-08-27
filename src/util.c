@@ -101,6 +101,8 @@ int is_dir_safe( const char *dir ) {
     if ( fstat( fd->dd_handle, &f ) EQ FAILED ) {
 #elif defined FREEBSD
     if ( fstat( dirfd( fd ), &f ) EQ FAILED ) { 
+#elif defined OPENBSD
+    if ( fstat( dirfd( fd ), &f ) EQ FAILED ) { 
 #else
     if ( fstat( fd->dd_fd, &f ) EQ FAILED ) {
 #endif
@@ -135,6 +137,8 @@ int is_dir_safe( const char *dir ) {
 #elif defined MINGW
   rc = fchdir( start->dd_handle );
 #elif defined FREEBSD
+  rc = fchdir( dirfd( start ) );
+#elif defined OPENBSD
   rc = fchdir( dirfd( start ) );
 #else
   rc = fchdir( start->dd_fd );

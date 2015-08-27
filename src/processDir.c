@@ -91,7 +91,7 @@ static int processFtwRecord(const char *fpath, const struct stat *sb, int tflag,
  *
  ****/
 
-inline int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned char *digestPtr ) {
+int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned char *digestPtr ) {
   struct hashRec_s *tmpRec;
   struct stat *tmpSb;
   metaData_t *tmpMD;

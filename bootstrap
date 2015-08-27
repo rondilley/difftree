@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# uncomment for openbsd
+#AUTOMAKE_VERSION=1.15;export AUTOMAKE_VERSION
+#AUTOCONF_VERSION=2.69;export AUTOCONF_VERSION
+
 echo "dt - bootstrap"
 aclocal
 automake --gnu --add-missing
