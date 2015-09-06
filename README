@@ -160,6 +160,7 @@ mt	Modify time changed
 at	Access time changed (disabled)
 ct	Create time changed (disabled)
 md5     File hash has changed
+sha256  File hash has changed
 
 The second column is the file type:
 -----------------------------------
@@ -177,12 +178,15 @@ dt comes with a minimal set of options as follows:
 
 % ./dt -h
 
-syntax: dt [options] {dir}|{file} [{dir}|{file} ...]
+dt v0.5.6 [Sep  5 2015 - 23:20:45]
+
+syntax: difftree [options] {dir}|{file} [{dir} ...]
  -d {lvl}   enable debugging info
  -h         this info
  -l {dir}   directory to create logs in (default: /var/log/dt)
- -m         hash files and compare (disables -q|--quick mode)
+ -m         MD5 hash files and compare (disables -q and -s modes)
  -q         do quick comparisons only
+ -s         SHA256 hash files and compare (disables -q and -m modes)
  -v         display version information
  -w {file}  write directory tree to file
 
@@ -190,19 +194,20 @@ The -l option is disabled.
 
 The -q option detects new and missing files and changes in file size.
 
+The -m and -s option created and compares MD5 or SHA256 hashes respectively
+
 The -d option is only useful if dt is compiled with --enable-debug.
 
 == Compatibility
 
 I have built and tested dt on the following operating systems:
 
-* Linux (openSUSE v11.4 [32/64bit])
-* Linux (RedHat 5ES [32/64bit])
-* Linux (Ubuntu v11.04 [64bit])
-* openBSD (v4.7 [i386])
-* openBSD (v4.9 [i386])
-* FreeBSD v8.2 [i386]
-* Mac OS/X 10.6
+* Linux (openSUSE v13.2 [32/64bit])
+* Linux (CentOS v7.0 [32/64bit])
+* Linux (Ubuntu v14.04.2/15.04 [64bit])
+* openBSD (v5.7 [i386])
+* FreeBSD (v10.2 [64bit])
+* Mac OS/X (Mavericks/Yosemite)
 * Cygwin
 
 I have confirmed that dt does not compile or run on the following:

@@ -5,7 +5,6 @@ Short-term:
 -----------
 * port to MinGW
 * add support for fts instead of nftw
-* add support for sha256
 
 Long-term:
 ----------
