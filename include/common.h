@@ -89,6 +89,9 @@ typedef struct {
   char *domainname;
   int debug;
   int hash;
+  int md5_hash;
+  int sha256_hash;
+  int digest_size;
   int quick;
   int mode;
   int facility;

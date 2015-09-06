@@ -1,35 +1,24 @@
 /*****
  *
- * Copyright (c) 2014, Ron Dilley
+ * Description: File Handling Functions
+ * 
+ * Copyright (c) 2010-2015, Ron Dilley
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *   - Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   - Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   - Neither the name of Uberadmin/BaraCUDA/Nightingale nor the names of
- *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *****/
+ ****/
 
 /****
  *
@@ -129,8 +118,12 @@ int writeRecord2File( const struct hashRec_s *hashRec ) {
 #ifndef MINGW
   fprintf( out, "BLOCKS=%ld|", (long int)tmpSb->st_blocks );
 #endif
-  if ( config->hash && ( tflag EQ S_IFREG ) )
-    fprintf( out, "MD5=\"%s\"|", hash2hex( tmpMD->digest, tmpBuf, MD5_HASH_LEN ) );
+  if ( config->hash && ( tflag EQ S_IFREG ) ) {
+      if ( config->sha256_hash )
+        fprintf( out, "SHA256=\"%s\"|", hash2hex( tmpMD->digest, tmpBuf, config->digest_size ) );
+      else
+        fprintf( out, "MD5=\"%s\"|", hash2hex( tmpMD->digest, tmpBuf, config->digest_size ) );
+  }
   fprintf( out, "\n" );
 
   /* can use this later to interrupt traversing the hash */
@@ -290,8 +283,12 @@ int loadV1File( FILE *inFile ) {
 	  printf( "DEBUG - Base: %s\n", compDir );
 #endif
       }
+    } else {
+      fprintf( stderr, "ERR - Base Dir too large\n" );
+      deInitParser();
+      fclose( inFile );
+      return( FAILED );
     }
-
   } else {
     fprintf( stderr, "ERR - Base Dir missing, file may be corrupt\n" );
     deInitParser();
@@ -448,7 +445,7 @@ int loadV1File( FILE *inFile ) {
 	} else if ( strcmp( inBuf, "KEY" ) EQ 0 ) {
 	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
 	  if ( strlen( inBuf ) > 0 ) {
-	    snprintf( keyString, sizeof( keyString ), "%s%s", compDir, inBuf );
+	    snprintf( keyString, sizeof( keyString ), "%s", inBuf );
 #ifdef DEBUG
 	    if ( config->debug >= 5 )
 	      printf( "DEBUG - KEY=%s\n", keyString );
@@ -549,16 +546,16 @@ int loadV1File( FILE *inFile ) {
 #endif
 	} else if ( strcmp( inBuf, "HLINKS" ) EQ 0 ) {
 	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
-	  #ifndef MINGW
+#ifndef MINGW
 	  sb.st_nlink = (nlink_t)atoi( inBuf );
-	  #endif
+#endif
 #ifdef DEBUG
 	  if ( config->debug >= 5 )
 	    printf( "DEBUG - HLINKS=%d\n", (int)sb.st_nlink );
 #endif
 	} else if ( strcmp( inBuf, "BLOCKS" ) EQ 0 ) {
 	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
-	  #ifndef MINGW
+#ifndef MINGW
 #ifdef OPENBSD
 	  sb.st_blocks = (int64_t)atol( inBuf );
 #else
@@ -571,6 +568,14 @@ int loadV1File( FILE *inFile ) {
 	    printf( "DEBUG - BLOCKS=%ld\n", (long int)sb.st_blocks );
 #endif
 	} else if ( strcmp( inBuf, "MD5" ) EQ 0 ) {
+          if ( config->hash ) {
+            if ( ! config->md5_hash ) {
+              fprintf( stderr, "WARN - Loading metadata file with MD5 hashes, switching to MD5 (-m)\n" );
+              config->md5_hash = TRUE;
+              config->digest_size = 16;
+              config->sha256_hash = FALSE;
+            }
+          }
 	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
 	  /* convert hash string to binary */
 	  for( dPos = 0, lPos = 0; dPos < MD5_HASH_LEN; dPos++, lPos+=2 ) {
@@ -582,6 +587,26 @@ int loadV1File( FILE *inFile ) {
 	  if ( config->debug >= 5 )
 	    printf( "DEBUG - MD5=%s\n", hash2hex( digest, inBuf, MD5_HASH_LEN ) );
 #endif
+	} else if ( strcmp( inBuf, "SHA256" ) EQ 0 ) {
+          if ( config->hash ) {
+            if ( ! config->sha256_hash ) {
+              fprintf( stderr, "WARN - Loading v1 metadata file with SHA256 hashes, switching to SHA256 (-s)\n" );
+              config->sha256_hash = TRUE;
+              config->digest_size = 32;
+              config->md5_hash = FALSE;
+            }
+          }
+	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
+	  /* convert hash string to binary */
+	  for( dPos = 0, lPos = 0; dPos < SHA256_HASH_LEN; dPos++, lPos+=2 ) {
+	    hByte[0] = inBuf[lPos];
+	    hByte[1] = inBuf[lPos+1];
+	    digest[dPos] = strtoul( hByte, NULL, 16 );
+	  }
+#ifdef DEBUG
+	  if ( config->debug >= 5 )
+	    printf( "DEBUG - SHA256=%s\n", hash2hex( digest, inBuf, SHA256_HASH_LEN ) );
+#endif
 	} else {
 	  fprintf( stderr, "ERR - Unknown field key [%s]\n", inBuf );
 	}
@@ -591,6 +616,11 @@ int loadV1File( FILE *inFile ) {
       sb.st_mode = tType | tPerm;
 
       /* load record into hash */
+#ifdef DEBUG
+      if ( config->debug >= 5 )
+	printf( "DEBUG - Key=%s\n", keyString );
+#endif
+          
       processRecord( keyString, &sb, FILE_RECORD, digest );
     }
     /********* done with line *********/

@@ -1,35 +1,24 @@
 /*****
  *
- * Copyright (c) 2009-2014, Ron Dilley
+ * Description: Directory Processing Functions
+ * 
+ * Copyright (c) 2009-2015, Ron Dilley
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *   - Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   - Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   - Neither the name of Uberadmin/BaraCUDA/Nightingale nor the names of
- *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *****/
+ ****/
 
 /****
  *
@@ -88,6 +77,11 @@ extern Config_t *config;
 #define FILE_RECORD 1
 
 static int processFtwRecord(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf) {
+#ifdef DEBUG
+  if ( config->debug > 6 )
+    if ( ftwbuf != NULL )
+      printf( "DEBUG - ftw: base=%d level=%d\n", ftwbuf->base, ftwbuf->level );
+#endif
   return processRecord( fpath, sb, FTW_RECORD, NULL );
 }
 
@@ -104,14 +98,16 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
   char tmpBuf[1024];
   char diffBuf[4096];
   struct tm *tmPtr;
-  MD5_CTX ctx;
+  MD5_CTX md5_ctx;
+  sha256_context sha256_ctx;
   FILE *inFile;
   size_t rCount;
   unsigned char rBuf[16384];
-  unsigned char digest[16];
+  unsigned char digest[32];
   int tflag = sb->st_mode & S_IFMT;
 
-  bzero( &ctx, sizeof( ctx ) );
+  bzero( &md5_ctx, sizeof( md5_ctx ) );
+  bzero( &sha256_ctx, sizeof( sha256_ctx ) );
   bzero( digest, sizeof( digest ) );
   bzero( rBuf, sizeof( rBuf ) );
   bzero( tmpBuf, sizeof( tmpBuf ) );
@@ -127,6 +123,11 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
     return( FTW_STOP );
   }
 
+  #ifdef DEBUG
+    if ( config->debug >= 3 )
+      printf( "DEBUG - Processing File [%s]\n", fpath+compDirLen );
+#endif
+        
   if ( baseDirHash != NULL ) {
     /* compare */
     if ( config->debug >=  5 )
@@ -137,29 +138,39 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
       if ( mode EQ FTW_RECORD ) {
 #ifdef DEBUG
 	if ( config->debug >= 3 )
-	  printf( "DEBUG - Generating MD5 of file [%s]\n", fpath );
+	  printf( "DEBUG - Generating hash of file [%s]\n", fpath+compDirLen );
 #endif
-	MD5_Init( &ctx );
+        if ( config->sha256_hash )
+            sha256_starts( &sha256_ctx );
+        else
+            MD5_Init( &md5_ctx );
+            
 	if ( ( inFile = fopen( fpath, "r" ) ) EQ NULL ) {
-	  fprintf( stderr, "ERR - Unable to open file [%s]\n", fpath );
+	  fprintf( stderr, "ERR - Unable to open file [%s]\n", fpath+compDirLen );
 	} else {
 	  while( ( rCount = fread( rBuf, 1, sizeof( rBuf ), inFile ) ) > 0 ) {
 #ifdef DEBUG
 	    if ( config->debug >= 6 )
-	      printf( "DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath );
+	      printf( "DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath+compDirLen );
 #endif
-	    MD5_Update( &ctx, rBuf, rCount );
+            if ( config->sha256_hash )
+                sha256_update( &sha256_ctx, rBuf, rCount );
+            else
+                MD5_Update( &md5_ctx, rBuf, rCount );
 	  }
 	  fclose( inFile );
-	  MD5_Final( digest, &ctx );
+          if ( config->sha256_hash )
+              sha256_finish( &sha256_ctx, digest );
+          else
+              MD5_Final( digest, &md5_ctx );
 	}
       } else if ( mode EQ FILE_RECORD ) {
 	if ( digestPtr != NULL ) {
 #ifdef DEBUG
 	  if ( config->debug >= 3 )
-	    printf( "DEBUG - Loading previously generated MD5 of file [%s]\n", fpath );
+	    printf( "DEBUG - Loading previously generated hash of file [%s]\n", fpath+compDirLen );
 #endif
-	  XMEMCPY( digest, digestPtr, sizeof( digest ) );
+	  XMEMCPY( digest, digestPtr, config->digest_size );
 	}
       } else {
 	/* unknown record type */
@@ -197,22 +208,30 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
 #endif
       } else {
 	if ( config->hash && ( tflag EQ S_IFREG ) ) {
-	  if ( memcmp( tmpMD->digest, digest, sizeof( digest ) ) != 0 ) {
-	    /* MD5 does not match */
+	  if ( memcmp( tmpMD->digest, digest, config->digest_size ) != 0 ) {
+	    /* hash does not match */
+            if ( config->sha256_hash ) {
 #ifdef HAVE_SNPRINTF
-	    snprintf( tmpBuf, sizeof( tmpBuf ), "md5[%s->", hash2hex( tmpMD->digest, rBuf, sizeof( digest ) ) );
+	      snprintf( tmpBuf, sizeof( tmpBuf ), "sha256[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
 #else
-	    sprintf( tmpBuf, "md5[%s->", hash2hex( tmpMD->digest, rBuf, sizeof( digest ) ) );
+	      sprintf( tmpBuf, "sha256[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
+#endif                
+            } else {
+#ifdef HAVE_SNPRINTF
+	      snprintf( tmpBuf, sizeof( tmpBuf ), "md5[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
+#else
+	      sprintf( tmpBuf, "md5[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
 #endif
+            }
 #ifdef HAVE_STRNCAT
 	    strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #else
 	    strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #endif
 #ifdef HAVE_SNPRINTF
-	    snprintf( tmpBuf, sizeof( tmpBuf ), "%s] ", hash2hex( digest, rBuf, sizeof( digest ) ) );
+	    snprintf( tmpBuf, sizeof( tmpBuf ), "%s] ", hash2hex( digest, rBuf, config->digest_size ) );
 #else
-	    sprintf( tmpBuf, "%s] ", hash2hex( digest, rBuf, sizeof( digest ) ) );
+	    sprintf( tmpBuf, "%s] ", hash2hex( digest, rBuf, config->digest_size ) );
 #endif
 #ifdef HAVE_STRNCAT
 	    strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
@@ -392,7 +411,7 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
     if ( config->hash && ( tflag EQ S_IFREG ) ) {
 #ifdef DEBUG
       if ( config->debug >= 3 )
-	printf( "DEBUG - Adding hash [%s] for file [%s]\n", hash2hex( digest, rBuf, sizeof( digest ) ), fpath );
+	printf( "DEBUG - Adding hash [%s] for file [%s]\n", hash2hex( digest, rBuf, sizeof( digest ) ), fpath+compDirLen );
 #endif
       XMEMCPY( tmpMD->digest, digest, sizeof( digest ) );
     }
@@ -410,27 +429,37 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
       if ( mode EQ FTW_RECORD ) {
 #ifdef DEBUG
 	if ( config->debug >= 3 )
-	  printf( "DEBUG - Generating MD5 of file [%s]\n", fpath );
+	  printf( "DEBUG - Generating hash of file [%s]\n", fpath+compDirLen );
 #endif
-	MD5_Init( &ctx );
+        if ( config->sha256_hash )
+            sha256_starts( &sha256_ctx );
+        else
+            MD5_Init( &md5_ctx );
+        
 	if ( ( inFile = fopen( fpath, "r" ) ) EQ NULL ) {
-	  fprintf( stderr, "ERR - Unable to open file [%s]\n", fpath );
+	  fprintf( stderr, "ERR - Unable to open file [%s]\n", fpath+compDirLen );
 	} else {
 	  while( ( rCount = fread( rBuf, 1, sizeof( rBuf ), inFile ) ) > 0 ) {
 #ifdef DEBUG
 	    if ( config->debug >= 6 )
-	      printf( "DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath );
+	      printf( "DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath+compDirLen );
 #endif
-	    MD5_Update( &ctx, rBuf, rCount );
+	    if ( config->sha256_hash )
+                sha256_update( &sha256_ctx, rBuf, rCount );
+            else
+                MD5_Update( &md5_ctx, rBuf, rCount );
 	  }
 	  fclose( inFile );
-	  MD5_Final( digest, &ctx );
+          if ( config->sha256_hash )
+            sha256_finish( &sha256_ctx, digest );
+          else
+            MD5_Final( digest, &md5_ctx );
 	}
       } else if ( mode EQ FILE_RECORD ) {
 	if ( digestPtr != NULL ) {
 #ifdef DEBUG
 	  if ( config->debug >= 3 )
-	    printf( "DEBUG - Loading previously generated MD5 of file [%s]\n", fpath );
+	    printf( "DEBUG - Loading previously generated MD5 of file [%s]\n", fpath+compDirLen );
 #endif
 	  XMEMCPY( digest, digestPtr, sizeof( digest ) );
 	}
@@ -469,12 +498,13 @@ PUBLIC int processDir( char *dirStr ) {
     return( FAILED );
   }
 
-  if ( lstat( realDirStr, &sb ) EQ 0 ) {
+  if ( lstat( dirStr, &sb ) EQ 0 ) {
     /* file exists, make sure it is a file */
     tflag = sb.st_mode & S_IFMT;
     if ( tflag EQ S_IFREG ) {
       /* process file */
-      printf( "Processing file [%s]\n", realDirStr );
+      compDirLen = 0;
+      printf( "Processing file [%s]\n", dirStr );
       if ( ( ret = loadFile( realDirStr ) ) EQ (-1) ) {
 		fprintf( stderr, "ERR - Problem while loading file\n" );
 		return( FAILED );
@@ -484,14 +514,14 @@ PUBLIC int processDir( char *dirStr ) {
 	  }	
     } else if ( tflag EQ S_IFDIR ) {
       /* process directory */
-      printf( "Processing dir [%s]\n", realDirStr );
+      printf( "Processing dir [%s]\n", dirStr );
       
 #ifdef HAVE_NFTW
-      if ( ( ret = nftw( realDirStr, processFtwRecord, 20, FTW_PHYS | FTW_ACTIONRETVAL ) ) EQ (-1) ) {
+      if ( ( ret = nftw( dirStr, processFtwRecord, 20, FTW_PHYS | FTW_ACTIONRETVAL ) ) EQ (-1) ) {
 #else
-      if ( ( ret = noftw( realDirStr, processFtwRecord, 20, FTW_PHYS | FTW_ACTIONRETVAL ) ) EQ (-1) ) {
+      if ( ( ret = noftw( dirStr, processFtwRecord, 20, FTW_PHYS | FTW_ACTIONRETVAL ) ) EQ (-1) ) {
 #endif
-	fprintf( stderr, "ERR - Unable to open dir [%s]\n", realDirStr );
+	fprintf( stderr, "ERR - Unable to open dir [%s]\n", dirStr );
 	return ( FAILED );
       } else if ( ret EQ FTW_STOP ) {
 	fprintf( stderr, "ERR - nftw() was interrupted by a signal\n" );
@@ -508,14 +538,14 @@ PUBLIC int processDir( char *dirStr ) {
 
 #ifdef DEBUG
       if ( config->debug >= 2 )
-	printf( "DEBUG - Finished processing dir [%s]\n", realDirStr );
+	printf( "DEBUG - Finished processing dir [%s]\n", dirStr );
 #endif
     } else {
-      fprintf( stderr, "ERR - [%s] is not a regular file or a directory\n", realDirStr );
+      fprintf( stderr, "ERR - [%s] is not a regular file or a directory\n", dirStr );
       return( FAILED );
     }
   } else {
-    fprintf( stderr, "ERR - Unable to stat file [%s]\n", realDirStr );
+    fprintf( stderr, "ERR - Unable to stat file [%s]\n", dirStr );
     return( FAILED );
   }
 

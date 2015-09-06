@@ -1,35 +1,24 @@
-/****
+/*****
  *
- * Copyright (c) 2012-2014, Ron Dilley
+ * Description: ftw Functions
+ * 
+ * Copyright (c) 2009-2015, Ron Dilley
  * All rights reserved.
  *
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-*
-*   - Redistributions of source code must retain the above copyright
-*     notice, this list of conditions and the following disclaimer.
-*   - Redistributions in binary form must reproduce the above copyright
-*     notice, this list of conditions and the following disclaimer in
-*     the documentation and/or other materials provided with the
-*     distribution.
-*   - Neither the name of Uberadmin/BaraCUDA/Nightingale nor the names of
-*     its contributors may be used to endorse or promote products derived
-*     from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-* HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
-* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-****/
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ ****/
 
 /****
  *
@@ -79,8 +68,11 @@ int walkDir(const char *path, int (*fn)(const char *, const struct stat *ptr, in
   char tmpPathBuf[PATH_MAX];
   int status;
 
-  //printf( "Entering [%s]\n", path );
-
+#ifdef DEBUG
+  if ( config->debug >= 3 )
+    printf( "DEBUG - noftw: Entering [%s]\n", path );
+#endif
+  
   if ( ( dir = opendir( path ) ) EQ NULL ) {
     fprintf( stderr, "ERR - Unable to open dir [%s]\n", path );
     return( -1 );
@@ -89,7 +81,11 @@ int walkDir(const char *path, int (*fn)(const char *, const struct stat *ptr, in
   while( ! quit & ( dp = readdir( dir ) ) != NULL ) {
     if ( ( strncmp( dp->d_name, ".", 2 ) != 0 ) & ( strncmp( dp->d_name, "..", 3 ) != 0 ) ) {
       snprintf( tmpPathBuf, sizeof( tmpPathBuf ), "%s/%s", path, dp->d_name );
-      //printf( "%s\n", tmpPathBuf );
+#ifdef DEBUG
+      if ( config->debug >= 5 )
+        printf( "DEBUG - noftw: %s\n", tmpPathBuf );
+#endif
+      
       if ( ( status = lstat( tmpPathBuf, &s ) ) EQ 0 ) {
 	fn( tmpPathBuf, &s, s.st_mode, NULL );
 	if ( S_ISDIR( s.st_mode ) ) {
@@ -103,8 +99,11 @@ int walkDir(const char *path, int (*fn)(const char *, const struct stat *ptr, in
 
   closedir( dir );
 
-  //printf( "Leaving [%s]\n", path );
-
+#ifdef DEBUG
+  if ( config->debug >= 3 )
+    printf( "DEBUG - noftw: Leaving [%s]\n", path );
+#endif
+  
   return( 0 );
 }
 
@@ -115,6 +114,10 @@ int walkDir(const char *path, int (*fn)(const char *, const struct stat *ptr, in
  ****/
 
 int noftw(const char *path, int (*fn)(const char *, const struct stat *ptr, int flag, struct FTW *), int depth, int flags) {
-
+#ifdef DEBUG
+  if ( config->debug )
+      printf( "DEBUG - noftw starting [%s]\n", path );
+#endif
+  
   return walkDir( path, fn, depth, flags );
 }

@@ -1,35 +1,24 @@
 /*****
  *
- * Copyright (c) 2009-2014, Ron Dilley
+ * Description: Hash Functions
+ * 
+ * Copyright (c) 2008-2015, Ron Dilley
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *   - Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   - Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   - Neither the name of Uberadmin/BaraCUDA/Nightingale nor the names of
- *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *****/
+ ****/
 
 /****
  *
@@ -140,8 +129,8 @@ int traverseHash( const struct hash_s *hash, int (*fn) (const struct hashRec_s *
   size_t key;
 
 #ifdef DEBUG
-	if ( config->debug >= 3 )
-		printf( "DEBUG - Traversing hash\n" );
+  if ( config->debug >= 3 )
+    printf( "DEBUG - Traversing hash\n" );
 #endif
 
   for ( key = 0; key < hash->size; key++ ) {
@@ -286,7 +275,8 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
     
     XMEMCPY( (void *)hash->records[key]->keyString, (void *)keyString, keyLen );
     hash->records[key]->keyLen = keyLen;
-    hash->records[key]->data = data;
+    if ( data != NULL )
+      hash->records[key]->data = data;
     hash->records[key]->lastSeen = hash->records[key]->createTime = time( NULL );
   } else {
     /* yup, traverse the linked list and stick it at the end */
@@ -295,7 +285,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 
     /* advance to the end of the chain */
     curHashRec = hash->records[key];
-    while( curHashRec != NULL & ! done ) {
+    while( curHashRec != NULL && ! done ) {
       if ( curHashRec->keyLen EQ keyLen ) {
 #ifdef DEBUG
 	if ( config->debug >= 4 )
@@ -430,7 +420,8 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 	}
 	XMEMCPY( (void *)tmpHashRec->keyString, (void *)keyString, keyLen );
 	tmpHashRec->keyLen = keyLen;
-	tmpHashRec->data = data;
+	if ( data != NULL )
+	  tmpHashRec->data = data;
 	tmpHashRec->lastSeen = tmpHashRec->createTime = time( NULL );
 	tmpHashRec->next = curHashRec;
 	if ( curHashRec->prev EQ NULL ) {
@@ -793,7 +784,7 @@ void dumpHash( struct hash_s *hash ) {
  ****/
 
 struct hash_s *growHash( struct hash_s *oldHash, size_t newHashSize ) {
-  
+  return NULL;
 }
 
 /****
@@ -803,7 +794,7 @@ struct hash_s *growHash( struct hash_s *oldHash, size_t newHashSize ) {
  ****/
 
 struct hash_s *shrinkHash( struct hash_s *oldHash, size_t newHashSize ) {
-
+  return NULL;
 }
 
 /****
