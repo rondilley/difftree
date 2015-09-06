@@ -348,16 +348,18 @@ PRIVATE void print_help( void ) {
   fprintf( stderr, " -d|--debug (0-9)     enable debugging info\n" );
   fprintf( stderr, " -h|--help            this info\n" );
   fprintf( stderr, " -l|--logdir {dir}    directory to create logs in (default: %s)\n", LOGDIR );
-  fprintf( stderr, " -m|--md5             hash files and compare (disables -q|--quick mode)\n" );
+  fprintf( stderr, " -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)\n" );
   fprintf( stderr, " -q|--quick           do quick comparisons only\n" );
+  fprintf( stderr, " -s|--sha256          SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)\n" );
   fprintf( stderr, " -v|--version         display version information\n" );
   fprintf( stderr, " -w|--write {file}    write directory tree to file\n" );
 #else
   fprintf( stderr, " -d {lvl}   enable debugging info\n" );
   fprintf( stderr, " -h         this info\n" );
   fprintf( stderr, " -l {dir}   directory to create logs in (default: %s)\n", LOGDIR );
-  fprintf( stderr, " -m         hash files and compare (disables -q|--quick mode)\n" );
+  fprintf( stderr, " -m         MD5 hash files and compare (disables -q and -s modes)\n" );
   fprintf( stderr, " -q         do quick comparisons only\n" );
+  fprintf( stderr, " -s         SHA256 hash files and compare (disables -q and -m modes)\n" );
   fprintf( stderr, " -v         display version information\n" );
   fprintf( stderr, " -w {file}  write directory tree to file\n" );
 #endif
