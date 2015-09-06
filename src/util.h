@@ -55,7 +55,9 @@
 #include "mem.h"
 
 #ifndef HAVE_ERRNO_H
+#ifndef EOPNOTSUPP
 # define EOPNOTSUPP  95  /* Operation not supported on transport endpoint */
+#endif
 #endif
 
 /****

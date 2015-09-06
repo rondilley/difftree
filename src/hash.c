@@ -76,7 +76,7 @@ uint32_t calcHash( uint32_t hashSize, const void *keyString ) {
   while (*ptr != '\0') {
     int tmp;
     val = (val << 4) + (*ptr);
-    if (tmp = (val & 0xf0000000)) {
+    if ((tmp = (val & 0xf0000000))) {
       val = val ^ (tmp >> 24);
       val = val ^ tmp;
     }
@@ -243,7 +243,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
   /* generate the lookup hash */
   for( i = 0; i < keyLen; i++ ) {
     val = (val << 4) + ( keyString[i] & 0xff );
-    if ( (tmp = (val & 0xf0000000)) ) {
+    if ((tmp = (val & 0xf0000000))) {
       val = val ^ (tmp >> 24);
       val = val ^ tmp;
     }
@@ -451,13 +451,13 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
   if ( config->debug >= 3 )
     printf( "DEBUG - Record Count: %d\n", hash->totalRecords );
 
-  if ( config->debug >= 5 ) {
-    /* verify record */
-    if ( getHashRecord( hash, keyString ) EQ NULL ) {
-      printf( "DEBUG - Hash (%s) just added can't be found\n", keyString );
-      return FAILED;
-    }
-  }
+  //if ( config->debug >= 5 ) {
+  //  /* verify record */
+  //  if ( getHashRecord( hash, keyString ) EQ NULL ) {
+  //    printf( "ERR - Hash (%s) just added but can't be found\n", keyString );
+  //    return FAILED;
+  //  }
+  //}
 #endif
 
   return TRUE;
@@ -686,7 +686,7 @@ struct hashRec_s *snoopHashRecord( struct hash_s *hash, const  char *keyString, 
   for( i = 0; i < keyLen; i++ ) {
     int tmp;
     val = (val << 4) + ( keyString[i] & 0xff );
-    if ( tmp = (val & 0xf0000000)) {
+    if ((tmp = (val & 0xf0000000))) {
       val = val ^ (tmp >> 24);
       val = val ^ tmp;
     }

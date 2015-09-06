@@ -216,7 +216,11 @@ int loadFile( const char *fName ) {
     }
 #endif
     if ( fileVersion EQ 1 ) {
-      loadV1File( inFile );
+      if ( loadV1File( inFile ) EQ FAILED ) {
+	deInitParser();
+        fclose( inFile );
+        return( FAILED );
+      }
     } else if ( fileVersion EQ 2 ) {
       loadV2File( inFile );
     } else {
@@ -256,7 +260,7 @@ int loadV1File( FILE *inFile ) {
   char startDate[128];
   char hByte[3];
   char *strPtr;
-  unsigned char digest[16]; /* MD5 */
+  unsigned char digest[32]; /* MD5 */
   struct stat sb;
   size_t count = 0, rCount;
   int i, dPos, lPos, ret, tflag;
@@ -316,18 +320,19 @@ int loadV1File( FILE *inFile ) {
 	getParsedField( inBuf, sizeof( inBuf ), i+1 );
 	if ( strncmp( inBuf, "QUICK", sizeof( inBuf ) ) EQ 0 ) {
 	  if ( ! config->quick ) {
-	    fprintf( stderr, "ERR - The file's mode is not compatible with the current mode [%s->%s]\n",
+	    fprintf( stderr, "ERR - The file's mode is not compatible with the current mode [%s->%s], switching to -q|--quick\n",
 		     inBuf, (config->hash) ? "HASH" : "NORMAL" );
-	    deInitParser();
-	    fclose( inFile );
-	    return( FAILED );
+	    config->quick = TRUE;
+	    config->hash = FALSE;
+	    config->md5_hash = FALSE;
+	    config->sha256_hash = FALSE;
 	  }
 	} else if ( strncmp( inBuf, "NORMAL", sizeof( inBuf ) ) EQ 0 ) {
 	  if ( config->hash ) {
-	    fprintf( stderr, "ERR - The file's mode is not compatible with the current mode [%s->HASH]\n", inBuf );
-	    deInitParser();
-	    fclose( inFile );
-	    return( FAILED );
+	    fprintf( stderr, "ERR - The file's mode is not compatible with the current mode [%s->HASH], disabling -m|--md5 or -s|--sha256\n", inBuf );
+	    config->hash = FALSE;
+	    config->md5_hash = FALSE;
+	    config->sha256_hash = FALSE;
 	  }
 	} else if ( strncmp( inBuf, "HASH", sizeof( inBuf ) ) EQ 0 ) {
 	  /* compatible with other modes */
@@ -572,40 +577,40 @@ int loadV1File( FILE *inFile ) {
             if ( ! config->md5_hash ) {
               fprintf( stderr, "WARN - Loading metadata file with MD5 hashes, switching to MD5 (-m)\n" );
               config->md5_hash = TRUE;
-              config->digest_size = 16;
+              config->digest_size = MD5_HASH_LEN;
               config->sha256_hash = FALSE;
             }
           }
 	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
 	  /* convert hash string to binary */
-	  for( dPos = 0, lPos = 0; dPos < MD5_HASH_LEN; dPos++, lPos+=2 ) {
+	  for( dPos = 0, lPos = 0; dPos < config->digest_size; dPos++, lPos+=2 ) {
 	    hByte[0] = inBuf[lPos];
 	    hByte[1] = inBuf[lPos+1];
 	    digest[dPos] = strtoul( hByte, NULL, 16 );
 	  }
 #ifdef DEBUG
 	  if ( config->debug >= 5 )
-	    printf( "DEBUG - MD5=%s\n", hash2hex( digest, inBuf, MD5_HASH_LEN ) );
+	    printf( "DEBUG - MD5=%s\n", hash2hex( digest, inBuf, config->digest_size ) );
 #endif
 	} else if ( strcmp( inBuf, "SHA256" ) EQ 0 ) {
           if ( config->hash ) {
             if ( ! config->sha256_hash ) {
               fprintf( stderr, "WARN - Loading v1 metadata file with SHA256 hashes, switching to SHA256 (-s)\n" );
               config->sha256_hash = TRUE;
-              config->digest_size = 32;
+              config->digest_size = SHA256_HASH_LEN;
               config->md5_hash = FALSE;
             }
           }
 	  getParsedField( inBuf, sizeof( inBuf ), i+1 );
 	  /* convert hash string to binary */
-	  for( dPos = 0, lPos = 0; dPos < SHA256_HASH_LEN; dPos++, lPos+=2 ) {
+	  for( dPos = 0, lPos = 0; dPos < config->digest_size; dPos++, lPos+=2 ) {
 	    hByte[0] = inBuf[lPos];
 	    hByte[1] = inBuf[lPos+1];
 	    digest[dPos] = strtoul( hByte, NULL, 16 );
 	  }
 #ifdef DEBUG
 	  if ( config->debug >= 5 )
-	    printf( "DEBUG - SHA256=%s\n", hash2hex( digest, inBuf, SHA256_HASH_LEN ) );
+	    printf( "DEBUG - SHA256=%s\n", hash2hex( digest, inBuf, config->digest_size ) );
 #endif
 	} else {
 	  fprintf( stderr, "ERR - Unknown field key [%s]\n", inBuf );

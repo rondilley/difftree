@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
   getrlimit( RLIMIT_CORE, &rlim );
 #ifdef DEBUG
   rlim.rlim_cur = rlim.rlim_max;
-  printf( "DEBUG - Core: %ld\n", rlim.rlim_cur );
+  printf( "DEBUG - RLIMIT_CORE: %ld\n", rlim.rlim_cur );
 #else
   rlim.rlim_cur = 0; 
 #endif
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
       if ( processDir( compDir ) EQ FAILED ) {
 	if ( baseDirHash != NULL  )
 	  freeHash( baseDirHash );
-	freeHash( compDirHash );
+        freeHash( compDirHash );
 	cleanup();
 	return( EXIT_FAILURE );
       }

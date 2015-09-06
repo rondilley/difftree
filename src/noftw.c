@@ -78,7 +78,7 @@ int walkDir(const char *path, int (*fn)(const char *, const struct stat *ptr, in
     return( -1 );
   }
 
-  while( ! quit & ( dp = readdir( dir ) ) != NULL ) {
+  while( ! quit && ( ( dp = readdir( dir ) ) != NULL ) ) {
     if ( ( strncmp( dp->d_name, ".", 2 ) != 0 ) & ( strncmp( dp->d_name, "..", 3 ) != 0 ) ) {
       snprintf( tmpPathBuf, sizeof( tmpPathBuf ), "%s/%s", path, dp->d_name );
 #ifdef DEBUG

@@ -212,13 +212,13 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
 	    /* hash does not match */
             if ( config->sha256_hash ) {
 #ifdef HAVE_SNPRINTF
-	      snprintf( tmpBuf, sizeof( tmpBuf ), "sha256[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
+	      snprintf( tmpBuf, sizeof( tmpBuf ), "sha256[%s->", hash2hex( tmpMD->digest, (char *)rBuf, config->digest_size ) );
 #else
 	      sprintf( tmpBuf, "sha256[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
 #endif                
             } else {
 #ifdef HAVE_SNPRINTF
-	      snprintf( tmpBuf, sizeof( tmpBuf ), "md5[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
+	      snprintf( tmpBuf, sizeof( tmpBuf ), "md5[%s->", hash2hex( tmpMD->digest, (char *)rBuf, config->digest_size ) );
 #else
 	      sprintf( tmpBuf, "md5[%s->", hash2hex( tmpMD->digest, rBuf, config->digest_size ) );
 #endif
@@ -229,7 +229,7 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
 	    strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #endif
 #ifdef HAVE_SNPRINTF
-	    snprintf( tmpBuf, sizeof( tmpBuf ), "%s] ", hash2hex( digest, rBuf, config->digest_size ) );
+	    snprintf( tmpBuf, sizeof( tmpBuf ), "%s] ", hash2hex( digest, (char *)rBuf, config->digest_size ) );
 #else
 	    sprintf( tmpBuf, "%s] ", hash2hex( digest, rBuf, config->digest_size ) );
 #endif
@@ -411,7 +411,7 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
     if ( config->hash && ( tflag EQ S_IFREG ) ) {
 #ifdef DEBUG
       if ( config->debug >= 3 )
-	printf( "DEBUG - Adding hash [%s] for file [%s]\n", hash2hex( digest, rBuf, sizeof( digest ) ), fpath+compDirLen );
+	printf( "DEBUG - Adding hash [%s] for file [%s]\n", hash2hex( digest, (char *)rBuf, sizeof( digest ) ), fpath+compDirLen );
 #endif
       XMEMCPY( tmpMD->digest, digest, sizeof( digest ) );
     }
@@ -488,24 +488,20 @@ inline int processRecord( const char *fpath, const struct stat *sb, char mode, u
  *
  ****/
 
-PUBLIC int processDir( char *dirStr ) {
+PUBLIC int processDir( char *startDirStr ) {
   struct stat sb;
-  char realDirStr[PATH_MAX];
-  int tflag, ret;
+  char dirStr[PATH_MAX+1];
+  int tflag, ret, startDirStrLen;
 
-  if ( realpath( dirStr, realDirStr ) EQ NULL ) {
-    fprintf( stderr, "ERR - Unable to determine real path\n" );
-    return( FAILED );
-  }
-
-  if ( lstat( dirStr, &sb ) EQ 0 ) {
+  if ( lstat( startDirStr, &sb ) EQ 0 ) {
     /* file exists, make sure it is a file */
     tflag = sb.st_mode & S_IFMT;
     if ( tflag EQ S_IFREG ) {
       /* process file */
       compDirLen = 0;
+      XSTRNCPY( dirStr, startDirStr, PATH_MAX );
       printf( "Processing file [%s]\n", dirStr );
-      if ( ( ret = loadFile( realDirStr ) ) EQ (-1) ) {
+      if ( ( ret = loadFile( dirStr ) ) EQ (-1) ) {
 		fprintf( stderr, "ERR - Problem while loading file\n" );
 		return( FAILED );
 	  } else if ( ret EQ FTW_STOP ) {
@@ -514,6 +510,17 @@ PUBLIC int processDir( char *dirStr ) {
 	  }	
     } else if ( tflag EQ S_IFDIR ) {
       /* process directory */
+      
+      /* add trailing slash if it is missing */
+      startDirStrLen = strlen( startDirStr );
+      if ( startDirStr[startDirStrLen-1] != '/' ) {
+	snprintf( dirStr, PATH_MAX, "%s/", startDirStr );
+	/* need to update the compDir variable used in main() */
+        compDir[compDirLen++] = '/';
+	compDir[compDirLen] = 0;
+      } else
+	XSTRNCPY( dirStr, startDirStr, PATH_MAX );
+
       printf( "Processing dir [%s]\n", dirStr );
       
 #ifdef HAVE_NFTW
@@ -541,11 +548,11 @@ PUBLIC int processDir( char *dirStr ) {
 	printf( "DEBUG - Finished processing dir [%s]\n", dirStr );
 #endif
     } else {
-      fprintf( stderr, "ERR - [%s] is not a regular file or a directory\n", dirStr );
+      fprintf( stderr, "ERR - [%s] is not a regular file or a directory\n", startDirStr );
       return( FAILED );
     }
   } else {
-    fprintf( stderr, "ERR - Unable to stat file [%s]\n", dirStr );
+    fprintf( stderr, "ERR - Unable to stat file [%s]\n", startDirStr );
     return( FAILED );
   }
 
@@ -603,7 +610,7 @@ int findMissingFiles( const struct hashRec_s *hashRec ) {
  *
  ****/
 
-char *hash2hex(const char *hash, char *hashStr, int hLen ) {
+char *hash2hex(const unsigned char *hash, char *hashStr, int hLen ) {
   int i;
   char hByte[3];
   bzero( hByte, sizeof( hByte ) );

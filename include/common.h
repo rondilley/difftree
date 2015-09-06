@@ -66,6 +66,18 @@
 # define MAXHOSTNAMELEN 64
 #endif
 
+/* address missing FTW defines for BSD */
+#ifndef FTW_CONTINUE
+# define FTW_CONTINUE 0
+#endif
+#ifndef FTW_STOP
+# define FTW_STOP 1
+#endif
+/* if FTW_ACTIONRETVAL is not defined, provably not supported */
+#ifndef FTW_ACTIONRETVAL
+# define FTW_ACTIONRETVAL 0
+#endif
+
 /****
  *
  * enums & typedefs

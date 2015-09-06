@@ -127,7 +127,7 @@ void *xmalloc_( const int size, const char *filename, const int linenumber) {
 #ifdef MEM_DEBUG
   d_result = malloc( sizeof(struct Mem_s) );
   if ( d_result EQ NULL ) {
-    fprintf( stderr, "out of memory (%d at %s:%d)!\n", sizeof(struct Mem_s), filename, linenumber );
+    fprintf( stderr, "out of memory (%ld at %s:%d)!\n", sizeof(struct Mem_s), filename, linenumber );
     XFREE_ALL();
     exit( 1 );
   }
@@ -210,7 +210,7 @@ void *xmemcpy_( void *d_ptr, void *s_ptr, const int size, const char *filename, 
   if ( dest_size > 0 ) {
     if ( dest_size < size ) {
       /* attempting to copy too much data into dest */
-      fprintf( stderr, "memcpy called with size (%d) larger than dest buffer 0x%08x (%d) at %s:%d\n", (int)d_ptr, size, dest_size, filename, linenumber );
+      fprintf( stderr, "memcpy called with size (%d) larger than dest buffer 0x%08lx (%d) at %s:%d\n", size, (unsigned long)d_ptr, dest_size, filename, linenumber );
       XFREE_ALL();
       exit( 1 );
     }
@@ -218,7 +218,7 @@ void *xmemcpy_( void *d_ptr, void *s_ptr, const int size, const char *filename, 
     if ( source_size > 0 ) {
       if ( source_size < size ) {
         /* attempting to copy too much data from source */
-        fprintf( stderr, "memcpy called with size (%d) larger than source buffer 0x%08x (%d) at %s:%d\n", (int)s_ptr, size, source_size, filename, linenumber );
+        fprintf( stderr, "memcpy called with size (%d) larger than source buffer 0x%08lx (%d) at %s:%d\n", size, (unsigned long)s_ptr, source_size, filename, linenumber );
         XFREE_ALL();
         exit( 1 );
       }
@@ -315,7 +315,7 @@ char *xmemncpy_( char *d_ptr, const char *s_ptr, const size_t len, const int siz
   if ( dest_size > 0 ) {
     if ( dest_size < size ) {
       /* attempting to copy too much data into dest */
-      fprintf( stderr, "memcpy called with size (%d) larger than dest buffer 0x%08x (%d) at %s:%d\n", (int)d_ptr, size, dest_size, filename, linenumber );
+      fprintf( stderr, "memcpy called with size (%d) larger than dest buffer 0x%08lx (%d) at %s:%d\n", size, (unsigned long)d_ptr, dest_size, filename, linenumber );
       XFREE_ALL();
       exit( 1 );
     }
@@ -323,7 +323,7 @@ char *xmemncpy_( char *d_ptr, const char *s_ptr, const size_t len, const int siz
     if ( source_size > 0 ) {
       if ( source_size < size ) {
         /* attempting to copy too much data from source */
-        fprintf( stderr, "memcpy called with size (%d) larger than source buffer 0x%08x (%d) at %s:%d\n", (int)s_ptr, size, source_size, filename, linenumber );
+        fprintf( stderr, "memcpy called with size (%d) larger than source buffer 0x%08lx (%d) at %s:%d\n", size, (unsigned long)s_ptr, source_size, filename, linenumber );
         XFREE_ALL();
         exit( 1 );
       }
@@ -474,16 +474,16 @@ void xfree_( void *ptr, const char *filename, const int linenumber ) {
   }
 
   if ( ! found ) {
-    fprintf( stderr, "free() called with 0x%x ptr but not found in debug object list at %s:%d\n", (int)ptr, filename, linenumber );
+    fprintf( stderr, "free() called with 0x%08lx ptr but not found in debug object list at %s:%d\n", (unsigned long)ptr, filename, linenumber );
     return;
   }
 #endif
 
 #ifdef SHOW_MEM_DEBUG
 #ifdef MEM_DEBUG
-  fprintf( stderr, "0x%08x free() called from %s:%d (%d bytes)\n", (int)ptr, filename, linenumber, size );
+  fprintf( stderr, "0x%08lx free() called from %s:%d (%d bytes)\n", (unsigned long)ptr, filename, linenumber, size );
 #else
-  fprintf( stderr, "0x%08x free() called from %s:%d\n", (int)ptr, filename, linenumber );
+  fprintf( stderr, "0x%08lx free() called from %s:%d\n", (unsigned long)ptr, filename, linenumber );
 #endif
 #endif
 
@@ -641,7 +641,7 @@ char *xstrcpy_( char *d_ptr, const char *s_ptr, const char *filename, const int 
   if ( dest_size > 0 ) {
     if ( dest_size < size ) {
       /* attempting to copy too much data into dest */
-      fprintf( stderr, "strcpy called with size (%d) larger than dest buffer 0x%08x (%d) at %s:%d\n", (int)d_ptr, size, dest_size, filename, linenumber );
+      fprintf( stderr, "strcpy called with size (%d) larger than dest buffer 0x%08lx (%d) at %s:%d\n", size, (unsigned long)d_ptr, dest_size, filename, linenumber );
       XFREE_ALL();
       exit( 1 );
     }
@@ -649,7 +649,7 @@ char *xstrcpy_( char *d_ptr, const char *s_ptr, const char *filename, const int 
     if ( source_size > 0 ) {
       if ( source_size < size ) {
         /* attempting to copy too much data from source */
-        fprintf( stderr, "strcpy called with size (%d) larger than source buffer 0x%08x (%d) at %s:%d\n", (int)s_ptr, size, source_size, filename, linenumber );
+        fprintf( stderr, "strcpy called with size (%d) larger than source buffer 0x%08lx (%d) at %s:%d\n", size, (unsigned long)s_ptr, source_size, filename, linenumber );
         XFREE_ALL();
         exit( 1 );
       }
@@ -776,7 +776,7 @@ char *xstrncpy_( char *d_ptr, const char *s_ptr, const size_t len, const char *f
   if ( dest_size > 0 ) {
     if ( dest_size < len ) {
       /* attempting to copy too much data into dest */
-      fprintf( stderr, "strncpy called with size (%d) larger than dest buffer 0x%08x (%d) at %s:%d\n", len, d_ptr, dest_size, filename, linenumber );
+      fprintf( stderr, "strncpy called with size (%ld) larger than dest buffer 0x%08lx (%d) at %s:%d\n", len, (unsigned long)d_ptr, dest_size, filename, linenumber );
       XFREE_ALL();
       exit( 1 );
     }
@@ -784,7 +784,7 @@ char *xstrncpy_( char *d_ptr, const char *s_ptr, const size_t len, const char *f
     if ( source_size > 0 ) {
       if ( source_size < len ) {
         /* attempting to copy too much data from source */
-        fprintf( stderr, "strncpy called with size (%d) larger than source buffer 0x%08x (%d) at %s:%d\n", len, s_ptr, source_size, filename, linenumber );
+        fprintf( stderr, "strncpy called with size (%ld) larger than source buffer 0x%08lx (%d) at %s:%d\n", len, (unsigned long)s_ptr, source_size, filename, linenumber );
         XFREE_ALL();
         exit( 1 );
       }

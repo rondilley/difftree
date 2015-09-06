@@ -53,45 +53,6 @@ PRIVATE char *preserve_environ[] = {
   0
 };
 
-#if defined(SOLARIS) || defined(MINGW)
-
-#define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
-                                /* mark "facility" */
-#define INTERNAL_MARK   LOG_MAKEPRI(LOG_NFACILITIES, 0)
-typedef struct _code {
-        char    *c_name;
-        int     c_val;
-} CODE;
-
-#ifndef HAVE_SYSLOG_H
-# define LOG_EMERG       0       // System is unusable
-# define LOG_ALERT       1       // Action must be taken immediately
-# define LOG_CRIT        2       // Critical conditions
-# define LOG_ERR         3       // Error conditions
-# define LOG_WARNING     4       // Warning conditions
-# define LOG_NOTICE      5       // Normal but significant condition
-# define LOG_INFO        6       // Informational
-# define LOG_DEBUG       7       // Debug-level messages
-#endif
-
-CODE prioritynames[] =
-  {
-    { "alert", LOG_ALERT },
-    { "crit", LOG_CRIT },
-    { "debug", LOG_DEBUG },
-    { "emerg", LOG_EMERG },
-    { "err", LOG_ERR },
-    { "error", LOG_ERR },               /* DEPRECATED */
-    { "info", LOG_INFO },
-    { "none", INTERNAL_NOPRI },         /* INTERNAL */
-    { "notice", LOG_NOTICE },
-    { "panic", LOG_EMERG },             /* DEPRECATED */
-    { "warn", LOG_WARNING },            /* DEPRECATED */
-    { "warning", LOG_WARNING },
-    { NULL, -1 }
-  };
-#endif
-
 /****
  *
  * external global variables
@@ -99,9 +60,6 @@ CODE prioritynames[] =
  ****/
 
 extern Config_t *config;
-#if !defined(SOLARIS) && !defined(MINGW)
-extern CODE prioritynames[];
-#endif
 extern char **environ;
 
 /****
@@ -109,50 +67,6 @@ extern char **environ;
  * functions
  *
  ****/
-
-/****
- *
- * display output
- *
- ****/
-
-int display( int level, char *format, ... ) {
-  PRIVATE va_list args;
-  PRIVATE char tmp_buf[SYSLOG_MAX];
-  PRIVATE int i;
-
-  va_start( args, format );
-  vsnprintf( tmp_buf, sizeof( tmp_buf ), format, args );
-  if ( tmp_buf[strlen(tmp_buf)-1] == '\n' ) {
-    tmp_buf[strlen(tmp_buf)-1] = 0;
-  }
-  va_end( args );
-
-  if ( config->mode != MODE_INTERACTIVE ) {
-    /* display info via syslog */
-    syslog( level, "%s", tmp_buf );
-  } else {
-    if ( level <= LOG_ERR ) {
-      /* display info via stderr */
-      for ( i = 0; prioritynames[i].c_name != NULL; i++ ) {
-	if ( prioritynames[i].c_val == level ) {
-	  fprintf( stderr, "%s[%u] - %s\n", prioritynames[i].c_name, config->cur_pid, tmp_buf );
-	  return TRUE;
-	}
-      }
-    } else {
-      /* display info via stdout */
-      for ( i = 0; prioritynames[i].c_name != NULL; i++ ) {
-	if ( prioritynames[i].c_val == level ) {
-	  printf( "%s[%u] - %s\n", prioritynames[i].c_name, config->cur_pid, tmp_buf );
-	  return TRUE;
-	}
-      }
-    }
-  }
-
-  return FAILED;
-}
 
 /****
  *
@@ -185,6 +99,8 @@ int is_dir_safe( const char *dir ) {
     if ( fstat( fd->__d_fd, &f ) EQ FAILED ) {
 #elif defined MINGW
     if ( fstat( fd->dd_handle, &f ) EQ FAILED ) {
+#elif defined FREEBSD
+    if ( fstat( dirfd( fd ), &f ) EQ FAILED ) { 
 #else
     if ( fstat( fd->dd_fd, &f ) EQ FAILED ) {
 #endif
@@ -218,50 +134,14 @@ int is_dir_safe( const char *dir ) {
   rc = fchdir( start->__d_fd );
 #elif defined MINGW
   rc = fchdir( start->dd_handle );
+#elif defined FREEBSD
+  rc = fchdir( dirfd( start ) );
 #else
   rc = fchdir( start->dd_fd );
 #endif
 
   closedir( start );
   return rc;
-}
-
-/****
- *
- * create pid file
- *
- ****/
-
-int create_pid_file( const char *filename ) {
-  int fd;
-  FILE *lockfile;
-  size_t len;
-  pid_t pid;
-
-  /* remove old pid file if it exists */
-  cleanup_pid_file( filename );
-  if ( ( fd = safe_open( filename ) ) < 0 ) {
-    display( LOG_ERR, "Unable to open pid file [%s]", filename );
-    return FAILED;
-  }
-  if ( ( lockfile = fdopen(fd, "w") ) EQ NULL ) {
-    display( LOG_ERR, "Unable to fdopen() pid file [%d]", fd );
-    return FAILED;
-  }
-  pid = getpid();
-  if (fprintf( lockfile, "%ld\n", (long)pid) < 0) {
-    display( LOG_ERR, "Unable to write pid to file [%s]", filename );
-    fclose( lockfile );
-    return FAILED;
-  }
-  if ( fflush( lockfile ) EQ EOF ) {
-    display( LOG_ERR, "fflush() failed [%s]", filename );
-    fclose( lockfile );
-    return FAILED;
-  }
-
-  fclose( lockfile );
-  return TRUE;
 }
 
 /****

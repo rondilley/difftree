@@ -30,5 +30,6 @@ Version 0.5.2 (October 21, 2011):
 Version 0.5.6 (September 5, 2015):
 
 * Minor bug fixes
+* Added some edge-case argument handling
 * Added SHA256 hashing
 

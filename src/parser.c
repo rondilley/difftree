@@ -251,7 +251,7 @@ int parseLine( char *line ) {
 
 #ifdef DEBUG
 	  if ( config->debug >= 6 )
-	    display( LOG_DEBUG, "Extracted string [%s]\n", fields[fieldPos] );
+	    printf( "DEBUG - Extracted string [%s]\n", fields[fieldPos] );
 #endif
 
 	  fieldPos++;
