@@ -144,6 +144,7 @@ int parseLine( char *line ) {
       } else if ( ( line[curLinePos] EQ '.' ) |
 		  ( (inQuotes) && (line[curLinePos] EQ ',') ) |
 		  ( line[curLinePos] EQ '-' ) |
+  		  ( line[curLinePos] EQ '+' ) |
 		  ( line[curLinePos] EQ '%' ) |
 		  ( line[curLinePos] EQ ':' ) |
 		  ( line[curLinePos] EQ '/' ) |

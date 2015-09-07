@@ -32,4 +32,12 @@
 
 2011-10-21  Ron Dilley <ron.dilley@uberadmin.com>
 
-	* refined file parser code
+	* Refined file parser code
+	
+2015-09-05  Ron Dilley <ron.dilley@uberadmin.com>
+
+        * Refined file parser code
+        * Fixed MD5 code
+        * Added SHA256 support
+        * Normalized staring directories to simplify compairing separate directory trees
+        * Reported to FreeBSD and OpenBSD
