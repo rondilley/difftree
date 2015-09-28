@@ -99,6 +99,7 @@ typedef struct {
   char *outfile;
   char *hostname;
   char *domainname;
+  char **exclusions;
   int debug;
   int hash;
   int md5_hash;

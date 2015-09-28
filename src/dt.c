@@ -23,7 +23,7 @@
 /****
  *
  * includes
- *.
+ *
  ****/
 
 #include <stdio.h>
@@ -104,6 +104,8 @@ int main(int argc, char *argv[]) {
     int option_index = 0;
     static struct option long_options[] = {
       {"debug", required_argument, 0, 'd' },
+      {"exdir"}, required_argument, 0, 'e' },
+      {"exfile"}, required_argument, 0, 'E' },
       {"help", no_argument, 0, 'h' },
       {"logdir", required_argument, 0, 'l' },
       {"md5", no_argument, 0, 'm' },
@@ -113,9 +115,9 @@ int main(int argc, char *argv[]) {
       {"write", required_argument, 0, 'w' },
       {0, no_argument, 0, 0}
     };
-    c = getopt_long(argc, argv, "d:hl:mqsvw:", long_options, &option_index);
+    c = getopt_long(argc, argv, "d:e:E:hl:mqsvw:", long_options, &option_index);
 #else
-    c = getopt( argc, argv, "d:hl:mqsvw:" );
+    c = getopt( argc, argv, "d:e:E:hl:mqsvw:" );
 #endif
 
     if (c EQ -1)
@@ -134,6 +136,28 @@ int main(int argc, char *argv[]) {
       config->mode = MODE_INTERACTIVE;
       break;
 
+    case 'e':
+      /* exclude a specific directory from the diff */
+      if ( ( config->exclusions = (char **)XMALLOC( sizeof( char * ) * 2 ) ) EQ NULL ) {
+        /* XXX problem */
+      }
+      if ( ( config->exclusions[0] = XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
+        /* XXX problem */
+      }
+      if ( optarg[0] != '/' ) {
+        config->exclusions[0][0] = '/';
+        XSTRNCPY( config->exclusions[0]+1, optarg, MAXPATHLEN - 1 );
+      } else
+        XSTRNCPY( config->exclusions[0], optarg, MAXPATHLEN );
+      config->exclusions[1] = 0;
+      break;
+        
+    case 'E':
+      /* exclude a list of directories in the specific file */
+      fprintf( stderr, "ERR - Exclusions in files is not yet supported\n" );
+      print_help();
+      return( EXIT_SUCCESS );
+        
     case 'h':
       /* show help info */
       print_help();
@@ -141,14 +165,18 @@ int main(int argc, char *argv[]) {
 
     case 'l':
       /* define the dir to store logs in */
-      config->log_dir = ( char * )XMALLOC( MAXPATHLEN + 1 );
+      if ( ( config->log_dir = ( char * )XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
+        /* XXX problem */
+      }
       XMEMSET( config->log_dir, 0, MAXPATHLEN + 1 );
       XSTRNCPY( config->log_dir, optarg, MAXPATHLEN );
       break;
 
     case 'w':
       /* define the dir to store logs in */
-      config->outfile = ( char * )XMALLOC( MAXPATHLEN + 1 );
+      if ( ( config->outfile = ( char * )XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
+        /* XXX problem */
+      }
       XMEMSET( config->outfile, 0, MAXPATHLEN + 1 );
       XSTRNCPY( config->outfile, optarg, MAXPATHLEN );
       break;
@@ -181,7 +209,9 @@ int main(int argc, char *argv[]) {
 
   /* set default options */
   if ( config->log_dir EQ NULL ) {
-    config->log_dir = ( char * )XMALLOC( strlen( LOGDIR ) + 1 );
+    if ( ( config->log_dir = ( char * )XMALLOC( strlen( LOGDIR ) + 1 ) ) EQ NULL ) {
+      /* XXX problem */
+    }
     XSTRNCPY( config->log_dir, LOGDIR, strlen( LOGDIR ) );   
   }
 
@@ -346,6 +376,8 @@ PRIVATE void print_help( void ) {
 
 #ifdef HAVE_GETOPT_LONG
   fprintf( stderr, " -d|--debug (0-9)     enable debugging info\n" );
+  fprintf( stderr, " -e|--exdir {dir}     exclude {dir}\n");
+  fprintf( stderr, " -E|--exfile {file}   exclude directories listed in {file}\n");
   fprintf( stderr, " -h|--help            this info\n" );
   fprintf( stderr, " -l|--logdir {dir}    directory to create logs in (default: %s)\n", LOGDIR );
   fprintf( stderr, " -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)\n" );
@@ -355,6 +387,8 @@ PRIVATE void print_help( void ) {
   fprintf( stderr, " -w|--write {file}    write directory tree to file\n" );
 #else
   fprintf( stderr, " -d {lvl}   enable debugging info\n" );
+  fprintf( stderr, " -e {dir}   exclude {dir}\n");
+  fprintf( stderr, " -E {file}  exclude directories listed in {file}\n");
   fprintf( stderr, " -h         this info\n" );
   fprintf( stderr, " -l {dir}   directory to create logs in (default: %s)\n", LOGDIR );
   fprintf( stderr, " -m         MD5 hash files and compare (disables -q and -s modes)\n" );

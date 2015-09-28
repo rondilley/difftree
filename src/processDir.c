@@ -97,6 +97,7 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
   metaData_t *tmpMD;
   char tmpBuf[1024];
   char diffBuf[4096];
+  char *foundPtr;
   struct tm *tmPtr;
   MD5_CTX md5_ctx;
   sha256_context sha256_ctx;
@@ -104,8 +105,32 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
   size_t rCount;
   unsigned char rBuf[16384];
   unsigned char digest[32];
-  int tflag = sb->st_mode & S_IFMT;
+  int i, tflag = sb->st_mode & S_IFMT;
 
+  /* check the directory exclusion list */
+  if ( config->exclusions != NULL ) {
+    if ( tflag EQ S_IFDIR ) {
+      for ( i = 0; config->exclusions[i] != NULL; i++ ) {
+#ifdef DEBUG
+        if ( config->debug >= 5 )
+          printf( "DEBUG - Exclusion [%s] Dir [%s]\n", config->exclusions[i], fpath );
+#endif
+        if ( ( foundPtr = strstr( fpath, config->exclusions[i] ) ) != NULL ) {
+          /* may have found a match */
+          if ( foundPtr[strlen(config->exclusions[i])] EQ '/' || foundPtr[strlen(config->exclusions[i])] EQ 0 ) {
+            /* good match, ignore the directory */
+#ifdef DEBUG
+            if ( config->debug >= 1 )
+              printf( "DEBUG - Excluding [%s]\n", fpath );
+#endif
+            return( FTW_CONTINUE );
+          }
+        }
+      }
+    }
+  }
+  
+  /* XXX switch to XMEMSET */
   bzero( &md5_ctx, sizeof( md5_ctx ) );
   bzero( &sha256_ctx, sizeof( sha256_ctx ) );
   bzero( digest, sizeof( digest ) );
