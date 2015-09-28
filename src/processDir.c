@@ -109,6 +109,33 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
 
   /* check the directory exclusion list */
   if ( config->exclusions != NULL ) {
+#ifndef FTW_SKIP_SUBTREE
+    for ( i = 0; config->exclusions[i] != NULL; i++ ) {
+#ifdef DEBUG
+      if ( config->debug >= 5 )
+        printf( "DEBUG - Exclusion [%s] Dir [%s]\n", config->exclusions[i], fpath );
+#endif
+      if ( ( foundPtr = strstr( fpath, config->exclusions[i] ) ) != NULL ) {
+        if ( tflag EQ S_IFDIR ) {
+          if ( foundPtr[strlen(config->exclusions[i])] EQ 0 ) {
+#ifdef DEBUG
+            if ( config->debug >= 1 )
+              printf( "DEBUG - Excluding directory [%s]\n", fpath );
+#endif
+            return( FTW_CONTINUE );
+          }
+        } else {
+          if ( foundPtr[strlen(config->exclusions[i])] EQ '/' ) {
+#ifdef DEBUG
+            if ( config->debug >= 1 )
+              printf( "DEBUG - Excluding file in a directory [%s]\n", fpath );
+#endif
+            return( FTW_CONTINUE );
+          }    
+        }
+      }
+    }
+#else
     if ( tflag EQ S_IFDIR ) {
       for ( i = 0; config->exclusions[i] != NULL; i++ ) {
 #ifdef DEBUG
@@ -116,18 +143,17 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
           printf( "DEBUG - Exclusion [%s] Dir [%s]\n", config->exclusions[i], fpath );
 #endif
         if ( ( foundPtr = strstr( fpath, config->exclusions[i] ) ) != NULL ) {
-          /* may have found a match */
-          if ( foundPtr[strlen(config->exclusions[i])] EQ '/' || foundPtr[strlen(config->exclusions[i])] EQ 0 ) {
-            /* good match, ignore the directory */
+          if ( foundPtr[strlen(config->exclusions[i])] EQ 0 ) {
 #ifdef DEBUG
             if ( config->debug >= 1 )
               printf( "DEBUG - Excluding [%s]\n", fpath );
 #endif
-            return( FTW_CONTINUE );
+            return( FTW_SKIP_SUBTREE );
           }
         }
       }
     }
+#endif
   }
   
   /* XXX switch to XMEMSET */
