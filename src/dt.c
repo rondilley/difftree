@@ -154,10 +154,13 @@ int main(int argc, char *argv[]) {
         
     case 'E':
       /* exclude a list of directories in the specific file */
-      fprintf( stderr, "ERR - Exclusions in files is not yet supported\n" );
+      //if ( loadExclusions( optarg ) != TRUE )
+      //  return( EXIT_FAILURE );
+      //break;
+      fprintf( stderr, "ERR - Feature not currently supported\n" );
       print_help();
       return( EXIT_SUCCESS );
-        
+      
     case 'h':
       /* show help info */
       print_help();

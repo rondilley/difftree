@@ -85,5 +85,6 @@ int writeDirHash2File( const struct hash_s *dirHash, const char *base, const cha
 int loadFile( const char *fName );
 int loadV1File( FILE *inFile );
 int loadV2File( FILE *inFile );
+int loadExclusions( char *fName );
 
 #endif /* FILEHANDLERS_DOT_H */

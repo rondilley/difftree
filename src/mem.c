@@ -135,7 +135,7 @@ void *xmalloc_( const int size, const char *filename, const int linenumber) {
   bzero( d_result, sizeof(struct Mem_s) );
 
 #ifdef SHOW_MEM_DEBUG
-  fprintf( stderr, "0x%08x malloc() called from %s:%d (%d bytes)\n", (int)result, filename, linenumber, size );
+  fprintf( stderr, "0x%08lx malloc() called from %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size );
 #endif
 
   /* link into the buffer chain */
@@ -225,13 +225,13 @@ void *xmemcpy_( void *d_ptr, void *s_ptr, const int size, const char *filename, 
     } else {
       /* could not find source buffer */
 #ifdef SHOW_MEM_DEBUG
-      fprintf( stderr, "0x%08x could not find source buffer at %s:%d called from %s:%d\n", (int)s_ptr, __FILE__, __LINE__, filename, linenumber );
+      fprintf( stderr, "0x%08lx could not find source buffer at %s:%d called from %s:%d\n", (unsigned long)s_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
     }
   } else {
     /* could not find dest buffer */
 #ifdef SHOW_MEM_DEBUG
-    fprintf( stderr, "0x%08x could not find dest buffer at %s:%d called from %s:%d\n", (int)d_ptr, __FILE__, __LINE__, filename, linenumber );
+    fprintf( stderr, "0x%08lx could not find dest buffer at %s:%d called from %s:%d\n", (unsigned long)d_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
   }
 #endif
@@ -262,7 +262,7 @@ void *xmemcpy_( void *d_ptr, void *s_ptr, const int size, const char *filename, 
   }
 
 #ifdef SHOW_MEM_DEBUG
-  fprintf( stderr, "0x%08x memcpy() called from %s:%d (%d bytes)\n", result, filename, linenumber, size );
+  fprintf( stderr, "0x%08lx memcpy() called from %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size );
 #endif
 
   return result;
@@ -330,13 +330,13 @@ char *xmemncpy_( char *d_ptr, const char *s_ptr, const size_t len, const int siz
     } else {
       /* could not find source buffer */
 #ifdef SHOW_MEM_DEBUG
-      fprintf( stderr, "0x%08x could not find source buffer at %s:%d called from %s%d\n", (int)s_ptr, __FILE__, __LINE__, filename, linenumber );
+      fprintf( stderr, "0x%08lx could not find source buffer at %s:%d called from %s%d\n", (unsigned long)s_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
     }
   } else {
     /* could not find dest buffer */
 #ifdef SHOW_MEM_DEBUG
-    fprintf( stderr, "0x%08x could not find dest buffer at %s:%d called from %s:%d\n", (int)d_ptr, __FILE__, __LINE__, filename, linenumber );
+    fprintf( stderr, "0x%08lx could not find dest buffer at %s:%d called from %s:%d\n", (unsigned long)d_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
   }
 #endif
@@ -367,7 +367,7 @@ char *xmemncpy_( char *d_ptr, const char *s_ptr, const size_t len, const int siz
   }
 
 #ifdef SHOW_MEM_DEBUG
-  fprintf( stderr, "0x%08x memcpy() called from %s:%d (%d bytes)\n", result, filename, linenumber, size );
+  fprintf( stderr, "0x%08lx memcpy() called from %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size );
 #endif
 
   return result;
@@ -396,7 +396,7 @@ void *xmemset_( void *ptr, const char value, const int size, const char *filenam
   }
 
 #ifdef DEBUG_MEM
-  fprintf( stderr, "0x%x memset %s:%d (%d bytes)\n", result, filename, linenumber, size);
+  fprintf( stderr, "0x%08lx memset %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size);
 #endif
 
   return result;
@@ -410,23 +410,69 @@ void *xmemset_( void *ptr, const char value, const int size, const char *filenam
 
 void *xrealloc_( void *ptr, int size, const char *filename, const int linenumber) {
   void *result;
-
+  int current_size, found = FALSE;
+  struct Mem_s *mem_ptr;
+  
   if ( ptr EQ NULL ) {
     fprintf( stderr, "realloc() called with NULL ptr at %s:%d\n", filename, linenumber );
     quit = TRUE;
     exit( 1 );
   }
 
-  result = realloc(ptr,size);
-#ifdef DEBUG_MEM
-  fprintf( stderr, "0x%x realloc %s:%d (%d bytes)\n", (int)result, filename, linenumber, size);
-#endif
-
-  if ( result EQ NULL ) {
-    fprintf( stderr, "out of memory (%d at %s:%d)!\n", size, filename, linenumber );
+  if ( size <= 0 ) {
+    fprintf( stderr, "realloc() called with invalid size [%d] at %s:%d\n", size, filename, linenumber );
     quit = TRUE;
     exit( 1 );
   }
+
+#ifdef MEM_DEBUG
+  /* search for debug mem objects */
+  mem_ptr = head;
+  while( mem_ptr != NULL ) {
+    if ( mem_ptr->buf_ptr EQ ptr ) {
+      /* found the dest */
+      current_size = mem_ptr->buf_size;
+      found = TRUE;
+      break;
+    }
+    mem_ptr = mem_ptr->next;
+  }
+
+  if ( found ) {
+    if ( size > current_size ) {
+      /* growing the buffer */
+#ifdef SHOW_MEM_DEBUG
+    fprintf( stderr, "0x%08lx growing buffer from [%d] to [%d] at %s:%d called from %s:%d\n", (unsigned long)ptr, current_size, size, __FILE__, __LINE__, filename, linenumber );
+#endif
+    } else if ( size < current_size ) {
+      /* shringing the buffer */
+#ifdef SHOW_MEM_DEBUG
+    fprintf( stderr, "0x%08lx could not find current buffer at %s:%d called from %s:%d\n", (unsigned long)ptr, __FILE__, __LINE__, filename, linenumber );
+#endif
+    } else {
+      /* no change, just return */
+      return( ptr );
+    }
+  } else {
+#ifdef SHOW_MEM_DEBUG
+    fprintf( stderr, "0x%08lx could not find current buffer at %s:%d called from %s:%d\n", (unsigned long)ptr, __FILE__, __LINE__, filename, linenumber );
+#endif      
+  }
+#endif
+
+  if ( ( result = realloc( ptr, size ) ) != NULL ) {
+#ifdef MEM_DEBUG
+      mem_ptr->buf_size = size;
+#endif
+  } else {
+    fprintf( stderr, "out of memory (%d at %s:%d)!\n", size, filename, linenumber );
+    quit = TRUE;
+    exit( 1 );   
+  }
+
+#ifdef MEM_DEBUG
+  fprintf( stderr, "0x%08lx realloc %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size);
+#endif
 
   return result;
 }
@@ -515,7 +561,7 @@ void xfree_all_( const char *filename, const int linenumber ) {
     head = d_ptr->next;
     if ( d_ptr->buf_ptr != NULL ) {
 #ifdef SHOW_MEM_DEBUG
-      fprintf( stderr, "0x%08x free %s:%d (%d bytes)\n", (int)d_ptr->buf_ptr, __FILE__, __LINE__, d_ptr->buf_size );
+      fprintf( stderr, "0x%08lx free %s:%d (%d bytes)\n", (unsigned long)d_ptr->buf_ptr, __FILE__, __LINE__, d_ptr->buf_size );
 #endif
       free( d_ptr->buf_ptr );
     }
@@ -538,7 +584,7 @@ char *xstrdup_( const char *str, const char *filename, const int linenumber ) {
   res = strdup( str );
 
 #ifdef DEBUG_MEM
-  fprintf( stderr, "0x%x malloc %s:%d (%d bytes, strdup)\n", (int)res, filename, linenumber, strlen(str)+1 );
+  fprintf( stderr, "0x%lx malloc %s:%d (%d bytes, strdup)\n", (unsigned long)res, filename, linenumber, strlen(str)+1 );
 #endif
 
   return res;
@@ -561,7 +607,7 @@ void xgrow_( void **old, int elementSize, int *oldCount, int newCount, char *fil
     tmp = malloc(size);
 
 #ifdef DEBUG_MEM
-    fprintf( stderr, "0x%x malloc %s:%d (grow)\n", (int)tmp, filename, linenumber );
+    fprintf( stderr, "0x%08lx malloc %s:%d (grow)\n", (unsigned long)tmp, filename, linenumber );
 #endif
 
   if ( tmp EQ NULL ) {
@@ -577,7 +623,7 @@ void xgrow_( void **old, int elementSize, int *oldCount, int newCount, char *fil
 
   if ( *old != NULL ) {
 #ifdef DEBUG_MEM
-    fprintf( stderr, "0x%x free %s:%d (grow)\n", (int) *old, filename, linenumber );
+    fprintf( stderr, "0x%08lx free %s:%d (grow)\n", (unsigned long) *old, filename, linenumber );
 #endif
     free( *old );
   }
@@ -656,13 +702,13 @@ char *xstrcpy_( char *d_ptr, const char *s_ptr, const char *filename, const int 
     } else {
       /* could not find source buffer */
 #ifdef SHOW_MEM_DEBUG
-      fprintf( stderr, "0x%08x could not find source buffer at %s:%d called from %s%d\n", (int)s_ptr, __FILE__, __LINE__, filename, linenumber );
+      fprintf( stderr, "0x%08lx could not find source buffer at %s:%d called from %s%d\n", (unsigned long)s_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
     }
   } else {
     /* could not find dest buffer */
 #ifdef SHOW_MEM_DEBUG
-    fprintf( stderr, "0x%08x could not find dest buffer at %s:%d called from %s:%d\n", (int)d_ptr, __FILE__, __LINE__, filename, linenumber );
+    fprintf( stderr, "0x%08lx could not find dest buffer at %s:%d called from %s:%d\n", (unsigned long)d_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
   }
 #endif
@@ -694,7 +740,7 @@ char *xstrcpy_( char *d_ptr, const char *s_ptr, const char *filename, const int 
   d_ptr[size-1] = 0;
 
 #ifdef SHOW_MEM_DEBUG
-  fprintf( stderr, "0x%08x strcpy() called from %s:%d (%d bytes)\n", result, filename, linenumber, size );
+  fprintf( stderr, "0x%08lx strcpy() called from %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size );
 #endif
 
   return result;
@@ -791,13 +837,13 @@ char *xstrncpy_( char *d_ptr, const char *s_ptr, const size_t len, const char *f
     } else {
       /* could not find source buffer */
 #ifdef SHOW_MEM_DEBUG
-      fprintf( stderr, "0x%08x could not find source buffer at %s:%d called from %s:%d\n", (int)s_ptr, __FILE__, __LINE__, filename, linenumber );
+      fprintf( stderr, "0x%08lx could not find source buffer at %s:%d called from %s:%d\n", (unsigned long)s_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
     }
   } else {
     /* could not find dest buffer */
 #ifdef SHOW_MEM_DEBUG
-    fprintf( stderr, "0x%08x could not find dest buffer at %s:%d called from %s:%d\n", (int)d_ptr, __FILE__, __LINE__, filename, linenumber );
+    fprintf( stderr, "0x%08lx could not find dest buffer at %s:%d called from %s:%d\n", (unsigned long)d_ptr, __FILE__, __LINE__, filename, linenumber );
 #endif
   }
 #endif
@@ -814,7 +860,7 @@ char *xstrncpy_( char *d_ptr, const char *s_ptr, const size_t len, const char *f
   }
 
 #ifdef SHOW_MEM_DEBUG
-  fprintf( stderr, "0x%08x strncpy() called from %s:%d (%d bytes)\n", result, filename, linenumber, size );
+  fprintf( stderr, "0x%08lx strncpy() called from %s:%d (%d bytes)\n", (unsigned long)result, filename, linenumber, size );
 #endif
 
   return result;

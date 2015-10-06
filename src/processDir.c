@@ -117,7 +117,7 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
 #endif
       if ( ( foundPtr = strstr( fpath, config->exclusions[i] ) ) != NULL ) {
         if ( tflag EQ S_IFDIR ) {
-          if ( foundPtr[strlen(config->exclusions[i])] EQ 0 ) {
+          if ( ( foundPtr[strlen(config->exclusions[i])] EQ '/' ) || ( foundPtr[strlen(config->exclusions[i])] EQ 0 ) ) {
 #ifdef DEBUG
             if ( config->debug >= 1 )
               printf( "DEBUG - Excluding directory [%s]\n", fpath );
@@ -128,7 +128,7 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
           if ( foundPtr[strlen(config->exclusions[i])] EQ '/' ) {
 #ifdef DEBUG
             if ( config->debug >= 1 )
-              printf( "DEBUG - Excluding file in a directory [%s]\n", fpath );
+              printf( "DEBUG - Excluding child [%s]\n", fpath );
 #endif
             return( FTW_CONTINUE );
           }    

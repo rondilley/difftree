@@ -676,3 +676,59 @@ int loadV2File( FILE *inFile ) {
   
   return (FTW_CONTINUE);
 }
+
+/****
+ *
+ * load exclusion list from file
+ * 
+ ****/
+
+int loadExclusions( char *fName ) {
+  FILE *inFile;
+  char inBuf[MAXPATHLEN+1];
+  int i, ret, count = 1, len;
+
+  if ( config->exclusions EQ NULL ) {
+    if ( ( config->exclusions = (char **)XMALLOC( sizeof( char * ) ) ) EQ NULL ) {
+      fprintf( stderr, "ERR - Unable to allocate memory for exclusion list\n" );
+      return( FAILED );
+    }
+    config->exclusions[0] = NULL;
+  } else
+    count = 2;
+  
+  if ( ( inFile = fopen( fName, "r" ) ) EQ NULL ) {
+    fprintf( stderr, "ERR - Unable to open file [%s] for reading\n", fName );
+    return( FAILED );
+  }
+
+  while( fgets( inBuf, MAXPATHLEN, inFile ) != NULL ) {
+    len = strlen( inBuf );
+    if ( ( inBuf[0] != '#' ) && ( len > 0 ) ) {
+      if( inBuf[len-1] EQ '\n' )
+        inBuf[len-1] = 0;
+#ifdef DEBUG
+      if ( config->debug >= 1 )
+        printf( "DEBUG - Read [%s] from exclusion file\n", inBuf );
+#endif
+      count++;
+      if ( ( config->exclusions = (char **)XREALLOC( config->exclusions, sizeof( char * ) * count ) ) EQ NULL ) {
+          /* XXX problem */
+      }
+      if ( ( config->exclusions[count-1] = XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
+        /* XXX problem */
+      }
+      if ( inBuf[0] != '/' ) {
+        config->exclusions[count-1][0] = '/';
+        XSTRNCPY( config->exclusions[count-1]+1, inBuf, MAXPATHLEN - 1 );
+      } else {
+        XSTRNCPY( config->exclusions[count-1], optarg, MAXPATHLEN );
+        config->exclusions[count] = 0;
+      }
+    }
+  }
+  
+  fclose( inFile );
+  
+  return( TRUE );
+}
