@@ -403,6 +403,7 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
 #endif
 	}
 
+        /* report if MTIME does not match */
 	if ( sb->st_mtime != tmpSb->st_mtime ) {
 	  tmPtr = localtime( &tmpSb->st_mtime );
 #ifdef HAVE_SNPRINTF
@@ -431,6 +432,67 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
 	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #endif
 	}
+        
+        /* report if ATIME does not match */
+        if ( sb->st_atime != tmpSb->st_atime ) {
+	  tmPtr = localtime( &tmpSb->st_atime );
+#ifdef HAVE_SNPRINTF
+	  snprintf( tmpBuf, sizeof( tmpBuf ), "at[%04d/%02d/%02d@%02d:%02d:%02d->",
+#else
+	  sprintf( tmpBuf, "at[%04d/%02d/%02d@%02d:%02d:%02d->",
+#endif
+		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
+		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
+#ifdef HAVE_STRNCAT
+          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#else
+	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#endif
+	  tmPtr = localtime( &sb->st_atime );
+#ifdef HAVE_SNPRINTF
+	  snprintf( tmpBuf, sizeof( tmpBuf ), "%04d/%02d/%02d@%02d:%02d:%02d] ",
+#else
+	  sprintf( tmpBuf, "%04d/%02d/%02d@%02d:%02d:%02d] ",
+#endif
+		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
+		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
+#ifdef HAVE_STRNCAT
+          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#else
+	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#endif
+	}
+
+        /* report if CTIME does not match */
+        if ( sb->st_ctime != tmpSb->st_ctime ) {
+	  tmPtr = localtime( &tmpSb->st_ctime );
+#ifdef HAVE_SNPRINTF
+	  snprintf( tmpBuf, sizeof( tmpBuf ), "ct[%04d/%02d/%02d@%02d:%02d:%02d->",
+#else
+	  sprintf( tmpBuf, "ct[%04d/%02d/%02d@%02d:%02d:%02d->",
+#endif
+		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
+		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
+#ifdef HAVE_STRNCAT
+          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#else
+	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#endif
+	  tmPtr = localtime( &sb->st_ctime );
+#ifdef HAVE_SNPRINTF
+	  snprintf( tmpBuf, sizeof( tmpBuf ), "%04d/%02d/%02d@%02d:%02d:%02d] ",
+#else
+	  sprintf( tmpBuf, "%04d/%02d/%02d@%02d:%02d:%02d] ",
+#endif
+		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
+		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
+#ifdef HAVE_STRNCAT
+          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#else
+	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+#endif
+	}
+
       }
 
       if ( strlen( diffBuf ) ) {

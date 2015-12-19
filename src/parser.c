@@ -153,6 +153,7 @@ int parseLine( char *line ) {
 		  ( line[curLinePos] EQ '~' ) |
 		  ( line[curLinePos] EQ '@' ) |
 		  ( line[curLinePos] EQ '&' ) |
+		  ( line[curLinePos] EQ '$' ) |
 		  ( line[curLinePos] EQ '(' ) |
 		  ( line[curLinePos] EQ ')' ) |
 		  ( (inQuotes) && (line[curLinePos] EQ '\'' ) ) |
