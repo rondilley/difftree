@@ -1,39 +1,73 @@
-.TH DT 1  "19 June 2011" "dt @VERSION@" "dt @VERSION@"
+.TH DT 1  "29 December 2015" "dt @VERSION@" "dt @VERSION@"
 .SH NAME
 dt \- Diff directory tree.
 .SH SYNOPSIS
 .na
 .B dt
 [
-.B \-hv
+.B \-ahmpqsv
 ] [
 .B \-d
 .I log\-level
 ] [
-.B \-l
-.I log\-dir
+.B \-e
+.I dir
 ] [
-.B \-q
+.B \-E
+.I file
+] [
+.B \-w
+.I file
 ]
 .SH DESCRIPTION
 .LP
 .B \fldt\fP is a simple command line utility to quickly identify changes to two or more directory trees.
-.SH OPTIONS
+.TP
+.B \-a
+show last access time changes (enables -p|--preserve)
 .TP
 .B \-d
 Enable debug mode, the higher the \fllog\-level\fP, the more verbose the logging.
 .TP
+.B \-e
+exclude {dir} and it's subdirectories
+.TP
+.B \-E
+exclude all the directories listed in {file}
+.TP
 .B \-h
 Display help details.
 .TP
-.B \-l
-Place log files in \fllog\-dir\fP.
+.B \-m
+MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)
+.TP
+.B \-p
+preserve ATIME when hashing files (must have appropriate privileges)
+.TP
+.B \-q
+Enable quick mode.
+.TP
+.B \-s
+SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)
 .TP
 .B \-v
 Show version information.
 .TP
-.B \-q
-Enable quick mode.
+.B \-w
+write directory tree to {file}
+
+.SH EXAMPLES
+You can use difftree to compare two or more directory trees or you can save how a directory tree looks and compare the current state of the directory tree to a previous saved file.
+
+dt -m -w cvs_dir.txt ~/cvs
+
+This command will process the ~/cvs directory tree and store the metadata in cvs_dir.txt.  That file can now be compared with other difftree files or directories.
+
+dt -m cvs_dir.txt ~/cvs
+
+You can compare more than two files and directories at the same time.  They will be compared left to right.
+
+dt -m cvs_dir.txt ~/cvs1 ~/cvs2 ~/cvs3 ~/cvs4
 
 .SH DIAGNOSTICS
 \fldt\fP returns 0 on normal program termination and 1 on error.  Additional diagnostic information is available through the \-d command line switch.
@@ -43,14 +77,9 @@ Enable quick mode.
 .B \flSIGHUP\fP will cause \fldt\fP to close the current logfile, then start a new logfile.
 .TP
 .B \flSIGTERM\fP will cause \fldt\fP to shutdown.
-.SH FILES
-.TP
-.B /var/log/dt/
-
-.SH SEE ALSO
 
 .SH COPYRIGHT
-dt is Copyright (c) 2011 Ron Dilley.
+dt is Copyright (c) 2011-2015 Ron Dilley.
 
 This program is free software; you can redistribute it and/or modify 
 it under the terms of the GNU General Public License as published 
