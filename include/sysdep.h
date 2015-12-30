@@ -38,6 +38,10 @@
 
 #include <time.h>
 
+#ifdef HAVE_UTIME_H
+# include <utime.h>
+#endif
+
 #ifdef HAVE_DIRENT_H
 # include <dirent.h>
 #endif
@@ -102,6 +106,14 @@
 # include <syslog.h>
 #endif
 
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
+#ifdef HAVE_GETOPT_H
+# include <getopt.h>
+#endif
+
 #ifdef HAVE_SYS_BITYPES_H
 # include <sys/bitypes.h>
 #endif
@@ -140,10 +152,6 @@
 
 #ifdef HAVE_SYS_SOCKIO_H
 # include <sys/sockio.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
 #endif
 
 #ifdef HAVE_VFORK_H

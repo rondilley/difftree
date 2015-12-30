@@ -87,6 +87,6 @@ typedef struct {
 PUBLIC int processDir( char *dirStr );
 int findMissingFiles( const struct hashRec_s *hashRec );
 char *hash2hex(const unsigned char *hash, char *hashStr, int hLen );
-inline int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned char *digest );
+int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned char *digest );
 
 #endif /* PROCESSDIR_DOT_H */

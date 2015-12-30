@@ -33,3 +33,7 @@ Version 0.5.6 (September 5, 2015):
 * Added some edge-case argument handling
 * Added SHA256 hashing
 
+Version 0.5.8 (December 29, 2015):
+* Minor bug fixes
+* Added atime change detection
+* Added atime preservation option

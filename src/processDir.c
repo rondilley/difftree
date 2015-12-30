@@ -106,7 +106,8 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
   unsigned char rBuf[16384];
   unsigned char digest[32];
   int i, tflag = sb->st_mode & S_IFMT;
-
+  struct utimbuf tmp_utimbuf;
+  
   /* check the directory exclusion list */
   if ( config->exclusions != NULL ) {
 #ifndef FTW_SKIP_SUBTREE
@@ -156,13 +157,13 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
 #endif
   }
   
-  /* XXX switch to XMEMSET */
-  bzero( &md5_ctx, sizeof( md5_ctx ) );
-  bzero( &sha256_ctx, sizeof( sha256_ctx ) );
-  bzero( digest, sizeof( digest ) );
-  bzero( rBuf, sizeof( rBuf ) );
-  bzero( tmpBuf, sizeof( tmpBuf ) );
-  bzero( diffBuf, sizeof( diffBuf ) );
+  /* zero buffers */
+  XMEMSET( &md5_ctx, 0, sizeof( md5_ctx ) );
+  XMEMSET( &sha256_ctx, 0, sizeof( sha256_ctx ) );
+  XMEMSET( digest, 0, sizeof( digest ) );
+  XMEMSET( rBuf, 0, sizeof( rBuf ) );
+  XMEMSET( tmpBuf, 0, sizeof( tmpBuf ) );
+  XMEMSET( diffBuf, 0, sizeof( diffBuf ) );
 
   if ( strlen( fpath ) <= compDirLen ) {
     /* ignore the root */
@@ -210,6 +211,16 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
                 MD5_Update( &md5_ctx, rBuf, rCount );
 	  }
 	  fclose( inFile );
+          
+          /* preserve atime */
+          if ( config->preserve_atime ) {
+            tmp_utimbuf.actime = sb->st_atime;
+            tmp_utimbuf.modtime = sb->st_mtime;
+            if ( utime( fpath, &tmp_utimbuf ) != 0 )
+              sprintf( "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror( errno ) );
+          }
+          
+          /* complete hash */
           if ( config->sha256_hash )
               sha256_finish( &sha256_ctx, digest );
           else
@@ -432,67 +443,38 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
 	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #endif
 	}
-        
-        /* report if ATIME does not match */
-        if ( sb->st_atime != tmpSb->st_atime ) {
-	  tmPtr = localtime( &tmpSb->st_atime );
-#ifdef HAVE_SNPRINTF
-	  snprintf( tmpBuf, sizeof( tmpBuf ), "at[%04d/%02d/%02d@%02d:%02d:%02d->",
-#else
-	  sprintf( tmpBuf, "at[%04d/%02d/%02d@%02d:%02d:%02d->",
-#endif
-		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
-		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
-#ifdef HAVE_STRNCAT
-          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
-#else
-	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
-#endif
-	  tmPtr = localtime( &sb->st_atime );
-#ifdef HAVE_SNPRINTF
-	  snprintf( tmpBuf, sizeof( tmpBuf ), "%04d/%02d/%02d@%02d:%02d:%02d] ",
-#else
-	  sprintf( tmpBuf, "%04d/%02d/%02d@%02d:%02d:%02d] ",
-#endif
-		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
-		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
-#ifdef HAVE_STRNCAT
-          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
-#else
-	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
-#endif
-	}
 
-        /* report if CTIME does not match */
-        if ( sb->st_ctime != tmpSb->st_ctime ) {
-	  tmPtr = localtime( &tmpSb->st_ctime );
+	if ( config->show_atime ) {
+          /* report if ATIME does not match */
+          if ( sb->st_atime != tmpSb->st_atime ) {
+	    tmPtr = localtime( &tmpSb->st_atime );
 #ifdef HAVE_SNPRINTF
-	  snprintf( tmpBuf, sizeof( tmpBuf ), "ct[%04d/%02d/%02d@%02d:%02d:%02d->",
+	    snprintf( tmpBuf, sizeof( tmpBuf ), "at[%04d/%02d/%02d@%02d:%02d:%02d->",
 #else
-	  sprintf( tmpBuf, "ct[%04d/%02d/%02d@%02d:%02d:%02d->",
+	    sprintf( tmpBuf, "at[%04d/%02d/%02d@%02d:%02d:%02d->",
 #endif
-		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
-		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
+                     tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
+                     tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
 #ifdef HAVE_STRNCAT
-          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+            strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #else
-	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+	    strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #endif
-	  tmPtr = localtime( &sb->st_ctime );
+	    tmPtr = localtime( &sb->st_atime );
 #ifdef HAVE_SNPRINTF
-	  snprintf( tmpBuf, sizeof( tmpBuf ), "%04d/%02d/%02d@%02d:%02d:%02d] ",
+	    snprintf( tmpBuf, sizeof( tmpBuf ), "%04d/%02d/%02d@%02d:%02d:%02d] ",
 #else
-	  sprintf( tmpBuf, "%04d/%02d/%02d@%02d:%02d:%02d] ",
+	    sprintf( tmpBuf, "%04d/%02d/%02d@%02d:%02d:%02d] ",
 #endif
-		   tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
-		   tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
+	  	     tmPtr->tm_year+1900, tmPtr->tm_mon+1, tmPtr->tm_mday,
+		     tmPtr->tm_hour, tmPtr->tm_min, tmPtr->tm_sec );
 #ifdef HAVE_STRNCAT
-          strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+            strncat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #else
-	  strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
+	    strlcat( diffBuf, tmpBuf, sizeof( diffBuf ) - 1 );
 #endif
-	}
-
+	  }
+        }
       }
 
       if ( strlen( diffBuf ) ) {
@@ -563,6 +545,16 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
                 MD5_Update( &md5_ctx, rBuf, rCount );
 	  }
 	  fclose( inFile );
+
+          /* preserve atime */
+          if ( config->preserve_atime ) {
+            tmp_utimbuf.actime = sb->st_atime;
+            tmp_utimbuf.modtime = sb->st_mtime;
+            if ( utime( fpath, &tmp_utimbuf ) != 0 )
+              sprintf( "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror( errno ) );
+          }
+
+          /* finalize hash */
           if ( config->sha256_hash )
             sha256_finish( &sha256_ctx, digest );
           else

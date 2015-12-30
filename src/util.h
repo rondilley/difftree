@@ -73,8 +73,6 @@ int create_pid_file( const char *filename );
 static int safe_open( const char *filename );
 static void cleanup_pid_file( const char *filename );
 void sanitize_environment( void );
-inline int isodd(const int n);
-inline int iseven(const int n);
 
 #endif /* end of UTIL_DOT_H */
 

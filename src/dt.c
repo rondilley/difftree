@@ -98,38 +98,52 @@ int main(int argc, char *argv[]) {
   config = ( Config_t * )XMALLOC( sizeof( Config_t ) );
   XMEMSET( config, 0, sizeof( Config_t ) );
 
+  /* get real uid and gid, we may want to drop privs */
+  config->gid = getgid();
+  config->uid = getuid();
+
   while (1) {
     int this_option_optind = optind ? optind : 1;
 #ifdef HAVE_GETOPT_LONG
     int option_index = 0;
     static struct option long_options[] = {
+      {"atime", no_argument, 0, 'a' },
       {"debug", required_argument, 0, 'd' },
-      {"exdir"}, required_argument, 0, 'e' },
-      {"exfile"}, required_argument, 0, 'E' },
+      {"exdir", required_argument, 0, 'e' },
+      {"exfile", required_argument, 0, 'E' },
       {"help", no_argument, 0, 'h' },
-      {"logdir", required_argument, 0, 'l' },
       {"md5", no_argument, 0, 'm' },
+      {"preserve", no_argument, 0, 'p' },
       {"quick", no_argument, 0, 'q' },
       {"sha256", no_argument, 0, 's' },
       {"version", no_argument, 0, 'v' },
       {"write", required_argument, 0, 'w' },
       {0, no_argument, 0, 0}
     };
-    c = getopt_long(argc, argv, "d:e:E:hl:mqsvw:", long_options, &option_index);
+    c = getopt_long(argc, argv, "ad:e:E:hmpqsvw:", long_options, &option_index);
 #else
-    c = getopt( argc, argv, "d:e:E:hl:mqsvw:" );
+    c = getopt( argc, argv, "ad:e:E:hmpqsvw:" );
 #endif
 
     if (c EQ -1)
       break;
 
     switch (c) {
-
-    case 'v':
-      /* show the version */
-      print_version();
-      return( EXIT_SUCCESS );
-
+      case 'a':
+      /* enable atime change reporting */
+      config->show_atime = TRUE;
+      
+    case 'p':
+      if ( config->uid != 0 ) {
+        fprintf( stderr, "ERR - Insufficient priviledges to preserve ATIME, aborting\n" );
+        print_help();
+        return( EXIT_FAILURE );
+      }
+      config->preserve_atime = TRUE;
+      
+      break;
+        
+      
     case 'd':
       /* show debig info */
       config->debug = atoi( optarg );
@@ -139,10 +153,13 @@ int main(int argc, char *argv[]) {
     case 'e':
       /* exclude a specific directory from the diff */
       if ( ( config->exclusions = (char **)XMALLOC( sizeof( char * ) * 2 ) ) EQ NULL ) {
-        /* XXX problem */
+        fprintf( stderr, "ERR - Unable to allocate memory for exclusion list\n" );
+        return( EXIT_FAILURE );
       }
       if ( ( config->exclusions[0] = XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
-        /* XXX problem */
+        fprintf( stderr, "ERR - Unable to allocate memory for exclusion list\n" );
+        XFREE( config->exclusions );
+        return( EXIT_FAILURE );
       }
       if ( optarg[0] != '/' ) {
         config->exclusions[0][0] = '/';
@@ -166,24 +183,6 @@ int main(int argc, char *argv[]) {
       print_help();
       return( EXIT_SUCCESS );
 
-    case 'l':
-      /* define the dir to store logs in */
-      if ( ( config->log_dir = ( char * )XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
-        /* XXX problem */
-      }
-      XMEMSET( config->log_dir, 0, MAXPATHLEN + 1 );
-      XSTRNCPY( config->log_dir, optarg, MAXPATHLEN );
-      break;
-
-    case 'w':
-      /* define the dir to store logs in */
-      if ( ( config->outfile = ( char * )XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
-        /* XXX problem */
-      }
-      XMEMSET( config->outfile, 0, MAXPATHLEN + 1 );
-      XSTRNCPY( config->outfile, optarg, MAXPATHLEN );
-      break;
-
     case 'm':
       /* md5 hash files */
       config->hash = TRUE;
@@ -205,36 +204,35 @@ int main(int argc, char *argv[]) {
       config->md5_hash = FALSE;
       break;
 
+    case 'v':
+      /* show the version */
+      print_version();
+      return( EXIT_SUCCESS );
+
+
+    case 'w':
+      /* define the dir to store logs in */
+      if ( ( config->outfile = ( char * )XMALLOC( MAXPATHLEN + 1 ) ) EQ NULL ) {
+        /* XXX problem */
+      }
+      XMEMSET( config->outfile, 0, MAXPATHLEN + 1 );
+      XSTRNCPY( config->outfile, optarg, MAXPATHLEN );
+      break;
+      
     default:
       fprintf( stderr, "Unknown option code [0%o]\n", c);
     }
-  }
-
-  /* set default options */
-  if ( config->log_dir EQ NULL ) {
-    if ( ( config->log_dir = ( char * )XMALLOC( strlen( LOGDIR ) + 1 ) ) EQ NULL ) {
-      /* XXX problem */
-    }
-    XSTRNCPY( config->log_dir, LOGDIR, strlen( LOGDIR ) );   
   }
 
   /* turn off quick mode if hash mode is enabled */
   if ( config->hash )
     config->quick = FALSE;
 
-  /* enable syslog */
-#ifdef HAVE_OPENLOG
-  openlog( PROGNAME, LOG_CONS & LOG_PID, LOG_LOCAL0 );
-#endif
-
   /* check dirs and files for danger */
 
   if ( time( &config->current_time ) EQ -1 ) {
     fprintf( stderr, "ERR - Unable to get current time\n" );
-#ifdef HAVE_CLOSELOG
-    /* cleanup syslog */
-    closelog();
-#endif
+    
     /* cleanup buffers */
     cleanup();
     return EXIT_FAILURE;
@@ -330,9 +328,6 @@ int main(int argc, char *argv[]) {
    *
    ****/
 
-  /* cleanup syslog */
-  closelog();
-
   cleanup();
 
   return( EXIT_SUCCESS );
@@ -378,23 +373,25 @@ PRIVATE void print_help( void ) {
   fprintf( stderr, "syntax: %s [options] {dir}|{file} [{dir} ...]\n", PACKAGE );
 
 #ifdef HAVE_GETOPT_LONG
+  fprintf( stderr, " -a|--atime           show last access time changes (enables -p|--preserve)\n" );
   fprintf( stderr, " -d|--debug (0-9)     enable debugging info\n" );
   fprintf( stderr, " -e|--exdir {dir}     exclude {dir}\n");
   fprintf( stderr, " -E|--exfile {file}   exclude directories listed in {file}\n");
   fprintf( stderr, " -h|--help            this info\n" );
-  fprintf( stderr, " -l|--logdir {dir}    directory to create logs in (default: %s)\n", LOGDIR );
   fprintf( stderr, " -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)\n" );
+  fprintf( stderr, " -p|--preserve        preserve ATIME when hashing files (must have appropriate priviledges)\n" );
   fprintf( stderr, " -q|--quick           do quick comparisons only\n" );
   fprintf( stderr, " -s|--sha256          SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)\n" );
   fprintf( stderr, " -v|--version         display version information\n" );
   fprintf( stderr, " -w|--write {file}    write directory tree to file\n" );
 #else
+  fprintf( stderr, " -a         show last access time changes (enables -p)\n" );
   fprintf( stderr, " -d {lvl}   enable debugging info\n" );
   fprintf( stderr, " -e {dir}   exclude {dir}\n");
   fprintf( stderr, " -E {file}  exclude directories listed in {file}\n");
   fprintf( stderr, " -h         this info\n" );
-  fprintf( stderr, " -l {dir}   directory to create logs in (default: %s)\n", LOGDIR );
   fprintf( stderr, " -m         MD5 hash files and compare (disables -q and -s modes)\n" );
+  fprintf( stderr, " -p         preserve ATIME when hashing files (must have appropriate priviledges)\n" );
   fprintf( stderr, " -q         do quick comparisons only\n" );
   fprintf( stderr, " -s         SHA256 hash files and compare (disables -q and -m modes)\n" );
   fprintf( stderr, " -v         display version information\n" );
@@ -416,8 +413,6 @@ PRIVATE void cleanup( void ) {
   if ( compDir != NULL )
     XFREE( compDir );
   XFREE( config->hostname );
-  if ( config->log_dir != NULL )
-    XFREE( config->log_dir );
   if ( config->home_dir != NULL )
     XFREE( config->home_dir );
   if ( config->outfile != NULL )

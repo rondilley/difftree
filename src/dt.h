@@ -74,7 +74,6 @@
 #include <common.h>
 #include "util.h"
 #include "mem.h"
-#include "getopt.h"
 #include "hash.h"
 #include "processDir.h"
 #if ! defined HAVE_FTW  && ! defined HAVE_NFTW

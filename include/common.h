@@ -95,7 +95,6 @@ typedef struct {
   uid_t uid;
   gid_t gid;
   char *home_dir;
-  char *log_dir;
   char *outfile;
   char *hostname;
   char *domainname;
@@ -107,8 +106,11 @@ typedef struct {
   int digest_size;
   int quick;
   int mode;
+  int preserve_atime;
   int facility;
   int priority;
+  int show_atime;
+  int show_ctime;
   time_t current_time;
   pid_t cur_pid;
   int timemark;

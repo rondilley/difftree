@@ -165,6 +165,8 @@ AC_CHECK_HEADERS([sys/time.h])
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/resource.h])
 AC_CHECK_HEADERS([sys/stat.h])
+AC_CHECK_HEADERS([unistd.h])
+AC_CHECK_HEADERS([getopt.h])
 AC_CHECK_HEADERS([stdbool.h])
 AC_CHECK_HEADERS([syslog.h])
 AC_CHECK_HEADERS([unistd.h])
@@ -172,6 +174,7 @@ AC_CHECK_HEADERS([wchar.h])
 AC_CHECK_HEADERS([ftw.h])
 AC_CHECK_HEADERS([pwd.h])
 AC_CHECK_HEADERS([signal.h])
+AC_CHECK_HEADERS([utime.h])
 AC_HEADER_DIRENT
 AC_HEADER_STDBOOL
 
@@ -203,6 +206,9 @@ AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([realpath])
+AC_CHECK_FUNCS([strstr])
+AC_CHECK_FUNCS([utime])
+AC_CHECK_FUNCS([getopt_long])
 
 dnl ############## Type checks
 
