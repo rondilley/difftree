@@ -157,7 +157,7 @@ u	UID changed
 g	GID changed
 p	Permissions changed
 mt	Modify time changed
-at	Access time changed (disabled)
+at	Access time changed
 ct	Create time changed (disabled)
 md5     File hash has changed
 sha256  File hash has changed
@@ -176,25 +176,31 @@ The third column is the fully qualified filename.
 
 dt comes with a minimal set of options as follows:
 
-% ./dt -h
-
-dt v0.5.6 [Sep  5 2015 - 23:20:45]
+% dt --help
+dt v0.5.8 [Dec 29 2015 - 21:28:09]
 
 syntax: difftree [options] {dir}|{file} [{dir} ...]
- -d {lvl}   enable debugging info
- -h         this info
- -l {dir}   directory to create logs in (default: /var/log/dt)
- -m         MD5 hash files and compare (disables -q and -s modes)
- -q         do quick comparisons only
- -s         SHA256 hash files and compare (disables -q and -m modes)
- -v         display version information
- -w {file}  write directory tree to file
+ -a|--atime           show last access time changes (enables -p|--preserve)
+ -d|--debug (0-9)     enable debugging info
+ -e|--exdir {dir}     exclude {dir}
+ -E|--exfile {file}   exclude directories listed in {file}
+ -h|--help            this info
+ -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)
+ -p|--preserve        preserve ATIME when hashing files (must have appropriate privileges)
+ -q|--quick           do quick comparisons only
+ -s|--sha256          SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)
+ -v|--version         display version information
+ -w|--write {file}    write directory tree to file
 
-The -l option is disabled.
+The -a|--atime option reports on any change to the last access times. This option enables the -p|--preserve option.
 
-The -q option detects new and missing files and changes in file size.
+The -e|--exdir and -E|--exfile options allow you to exclude directories.
 
-The -m and -s option created and compares MD5 or SHA256 hashes respectively
+The -p|--preserve option attempts to preserve the last access time when files are hashed. This only works if you have sufficient privileges to change atime and mtime.
+
+The -q option detects new and missing files and changes in file size. This disables -m|--md5 and -s|--sha256 mode.
+
+The -m|--md5 and -s|--sha256 options enable file hashing, these are mutually exclusive and either option disables -q|--quick mode.
 
 The -d option is only useful if dt is compiled with --enable-debug.
 
