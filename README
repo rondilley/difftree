@@ -177,7 +177,6 @@ The third column is the fully qualified filename.
 dt comes with a minimal set of options as follows:
 
 % dt --help
-dt v0.5.8 [Dec 29 2015 - 21:28:09]
 
 syntax: difftree [options] {dir}|{file} [{dir} ...]
  -a|--atime           show last access time changes (enables -p|--preserve)

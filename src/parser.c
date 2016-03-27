@@ -143,6 +143,7 @@ int parseLine( char *line ) {
 	curLinePos++;
       } else if ( ( line[curLinePos] EQ '.' ) |
 		  ( (inQuotes) && (line[curLinePos] EQ ',') ) |
+		  ( (inQuotes) && (line[curLinePos] EQ '\'') ) |
 		  ( line[curLinePos] EQ '-' ) |
   		  ( line[curLinePos] EQ '+' ) |
 		  ( line[curLinePos] EQ '%' ) |

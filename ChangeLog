@@ -47,3 +47,7 @@
 	* Refined file parser code
 	* added atime change detection code
 	* added atime preservation option
+
+2016-03-26  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Fixed parser bug (not handling \' properly in files) - tnx Tyler 
