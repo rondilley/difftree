@@ -2,7 +2,7 @@
  *
  * Description: Hash Function Headers
  * 
- * Copyright (c) 2009-2015, Ron Dilley
+ * Copyright (c) 2009-2017, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -41,6 +41,7 @@
 
 #include <common.h>
 #include "mem.h"
+#include "util.h"
 
 /****
  *
@@ -95,6 +96,7 @@ char *hexConvert( const char *keyString, int keyLen, char *buf, const int bufLen
 char *utfConvert( const char *keyString, int keyLen, char *buf, const int bufLen );
 uint32_t getHashSize( struct hash_s *hash );
 int traverseHash( const struct hash_s *hash, int (*fn) (const struct hashRec_s *hashRec) );
+void *deleteHashRecord( struct hash_s *hash, const char *keyString, int keyLen );
 
 #endif /* end of HASH_DOT_H */
 

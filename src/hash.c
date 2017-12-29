@@ -2,7 +2,7 @@
  *
  * Description: Hash Functions
  * 
- * Copyright (c) 2008-2015, Ron Dilley
+ * Copyright (c) 2008-2017, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -266,13 +266,12 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
       return FAILED;
     }
     XMEMSET( (struct hashRec_s *)hash->records[key], 0, sizeof( struct hashRec_s ) );
-    if ( ( hash->records[key]->keyString = (char *)XMALLOC( strlen( keyString ) + 1 ) ) EQ NULL ) {
+    if ( ( hash->records[key]->keyString = (char *)XMALLOC( keyLen ) ) EQ NULL ) {
       fprintf( stderr, "ERR - Unable to allocate space for hash label [%s]\n", hexConvert( keyString, keyLen, nBuf, sizeof( nBuf ) ) );
       XFREE( hash->records[key] );
       hash->records[key] = NULL;
       return FAILED;
     }
-    
     XMEMCPY( (void *)hash->records[key]->keyString, (void *)keyString, keyLen );
     hash->records[key]->keyLen = keyLen;
     if ( data != NULL )
@@ -295,14 +294,14 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 	  /* duplicate, ignore */
 #ifdef DEBUG
 	  if ( config->debug >= 1 ) {
-	    printf( "DEBUG - Ignoring duplicate hash [%s] X [%s]\n", curHashRec->keyString, keyString );
+	    printf( "DEBUG - Ignoring duplicate hash [%s] X [%s]\n", hexConvert( curHashRec->keyString, keyLen, nBuf, sizeof( nBuf )/2 ), hexConvert( keyString, keyLen, nBuf+2048, sizeof( nBuf )/2 ) );
 	  }
 #endif
 	  return FAILED;
 	} else if ( ret < 0 ) {
 #ifdef DEBUG
 	  if ( config->debug >= 2 )
-	    printf( "DEBUG - new cmp (%s) > old cmp (%s)\n", keyString, curHashRec->keyString );
+	    printf( "DEBUG - new cmp (%s) > old cmp (%s)\n", hexConvert( keyString, keyLen, nBuf+2048, sizeof( nBuf )/2 ), hexConvert( curHashRec->keyString, keyLen, nBuf, sizeof( nBuf )/2 ) );
 #endif
 	  if ( curHashRec->next != NULL ) {
 #ifdef DEBUG
@@ -323,7 +322,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 	      return FAILED;
 	    }
 	    XMEMSET( (struct hashRec_s *)curHashRec->next, 0, sizeof( struct hashRec_s ) );
-	    if ( ( curHashRec->next->keyString = (char *)XMALLOC( keyLen + 1 ) ) EQ NULL ) {
+	    if ( ( curHashRec->next->keyString = (char *)XMALLOC( keyLen ) ) EQ NULL ) {
 	      fprintf( stderr, "ERR - Unable to allocate space for hash label\n" );
 	      XFREE( curHashRec->next );
 	      curHashRec->next = NULL;
@@ -339,14 +338,14 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 	} else {
 #ifdef DEBUG
 	  if ( config->debug >= 2 )
-	    printf( "DEBUG - old cmp (%s) > new cmp (%s)\n", curHashRec->keyString, keyString  );
+	    printf( "DEBUG - old cmp (%s) > new cmp (%s)\n", hexConvert( curHashRec->keyString, keyLen, nBuf, sizeof( nBuf )/2 ), hexConvert( keyString, keyLen, nBuf+2048, sizeof( nBuf )/2 )  );
 #endif
 	  if ( ( tmpHashRec = (struct hashRec_s *)XMALLOC( sizeof( struct hashRec_s ) ) ) EQ NULL ) {
 	    fprintf( stderr, "ERR - Unable to allocate space for hash\n" );
 	    return FAILED;
 	  }
 	  XMEMSET( (struct hashRec_s *)tmpHashRec, 0, sizeof( struct hashRec_s ) );
-	  if ( ( tmpHashRec->keyString = (char *)XMALLOC( keyLen + 1 ) ) EQ NULL ) {
+	  if ( ( tmpHashRec->keyString = (char *)XMALLOC( keyLen ) ) EQ NULL ) {
 	    fprintf( stderr, "ERR - Unable to allocate space for hash label\n" );
 	    XFREE( tmpHashRec );
 	    return FAILED;
@@ -369,7 +368,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
       } else if ( curHashRec->keyLen < keyLen ) {
 #ifdef DEBUG
 	if ( config->debug >= 2 )
-	  printf( "DEBUG - new len (%s) > old len (%s)\n", keyString, curHashRec->keyString );
+	  printf( "DEBUG - new len (%s) > old len (%s)\n", hexConvert( keyString, keyLen, nBuf+2048, sizeof( nBuf )/2 ), hexConvert( curHashRec->keyString, keyLen, nBuf, sizeof( nBuf )/2 ) );
 #endif
 	if ( curHashRec->next != NULL ) {
 #ifdef DEBUG
@@ -390,7 +389,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 	    return FAILED;
 	  }
 	  XMEMSET( (struct hashRec_s *)curHashRec->next, 0, sizeof( struct hashRec_s ) );
-	  if ( ( curHashRec->next->keyString = (char *)XMALLOC( keyLen + 1 ) ) EQ NULL ) {
+	  if ( ( curHashRec->next->keyString = (char *)XMALLOC( keyLen ) ) EQ NULL ) {
 	    fprintf( stderr, "ERR - Unable to allocate space for hash label\n" );
 	    XFREE( curHashRec->next );
 	    curHashRec->next = NULL;
@@ -406,7 +405,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
       } else {
 #ifdef DEBUG
 	if ( config->debug >= 2 )
-	  printf( "DEBUG - old len (%s) > new len (%s)\n", curHashRec->keyString, keyString );
+	  printf( "DEBUG - old len (%s) > new len (%s)\n", hexConvert( curHashRec->keyString, keyLen, nBuf, sizeof( nBuf )/2 ), hexConvert( keyString, keyLen, nBuf+2048, sizeof( nBuf )/2 ) );
 #endif
 	if ( ( tmpHashRec = (struct hashRec_s *)XMALLOC( sizeof( struct hashRec_s ) ) ) EQ NULL ) {
 	  fprintf( stderr, "ERR - Unable to allocate space for hash\n" );
@@ -439,7 +438,7 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 
 #ifdef DEBUG
   if ( config->debug >= 4 )
-    printf( "DEBUG - Added hash [%d] (%s) at depth [%d]\n", key, keyString, tmpDepth );
+    printf( "DEBUG - Added hash [%d] (%s) at depth [%d]\n", key, hexConvert( keyString, keyLen, nBuf, sizeof( nBuf ) ), tmpDepth );
 #endif
 
   if ( hash->maxDepth < tmpDepth )
@@ -450,14 +449,6 @@ int addUniqueHashRec( struct hash_s *hash, const char *keyString, int keyLen, vo
 #ifdef DEBUG
   if ( config->debug >= 3 )
     printf( "DEBUG - Record Count: %d\n", hash->totalRecords );
-
-  //if ( config->debug >= 5 ) {
-  //  /* verify record */
-  //  if ( getHashRecord( hash, keyString ) EQ NULL ) {
-  //    printf( "ERR - Hash (%s) just added but can't be found\n", keyString );
-  //    return FAILED;
-  //  }
-  //}
 #endif
 
   return TRUE;
@@ -833,10 +824,12 @@ struct hash_s *dyGrowHash( struct hash_s *oldHash ) {
   
     for ( tmpKey = 0; tmpKey < oldHash->size; tmpKey++ ) {
       curHashRec = oldHash->records[tmpKey];
+      
       while ( curHashRec != NULL ) {
 	tmpHashRec = curHashRec;
 	addUniqueHashRec( tmpHash, curHashRec->keyString, curHashRec->keyLen, curHashRec->data );
 	curHashRec = curHashRec->next;
+        
 	XFREE( tmpHashRec->keyString );
 	XFREE( tmpHashRec );
       }
@@ -903,6 +896,77 @@ struct hash_s *dyShrinkHash( struct hash_s *oldHash ) {
   return oldHash;
 }
 
+/****
+ * 
+ * remove hash record
+ * 
+ ****/
+
+void *deleteHashRecord( struct hash_s *hash, const char *keyString, int keyLen ) {
+  uint32_t key;
+  int depth = 0;
+  struct hashRec_s *tmpHashRec;
+  uint32_t val = 0;
+  const char *ptr;
+  char oBuf[4096];
+  char nBuf[4096];
+  int i = 0;
+  void *data;
+  
+#ifdef DEBUG
+  if ( config->debug >= 3 )
+    printf( "DEBUG - Searching for [%s]\n",  hexConvert( keyString, keyLen, nBuf, sizeof( nBuf ) ) );
+#endif
+
+  if ( keyLen EQ 0 )
+    keyLen = strlen( keyString );
+
+  /* generate the lookup hash */
+  for( i = 0; i < keyLen; i++ ) {
+    int tmp;
+    val = (val << 4) + ( keyString[i] & 0xff );
+    if ((tmp = (val & 0xf0000000))) {
+      val = val ^ (tmp >> 24);
+      val = val ^ tmp;
+    }
+  }
+  key = val % hash->size;
+
+  /* XXX switch to a single while loop */
+  
+  tmpHashRec = hash->records[key];
+  while( tmpHashRec != NULL ) {
+    if ( XMEMCMP( tmpHashRec->keyString, keyString, keyLen ) EQ 0 ) {
+#ifdef DEBUG
+      if ( config->debug >= 4 )
+	printf( "DEBUG - Found (%s) in hash table at [%d] at depth [%d] [%s]\n", hexConvert( keyString, keyLen, nBuf, sizeof( nBuf ) ), key, depth, hexConvert( tmpHashRec->keyString, tmpHashRec->keyLen, oBuf, sizeof( oBuf ) ) );
+#endif
+      
+#ifdef DEBUG
+      if ( config->debug >= 3 )
+	printf( "DEBUG - Removing hash record\n" );
+#endif
+      if ( tmpHashRec->prev != NULL )
+        tmpHashRec->prev->next = tmpHashRec->next;
+      else
+        hash->records[key] = tmpHashRec->next;
+
+      if ( tmpHashRec->next != NULL )
+        tmpHashRec->next->prev = tmpHashRec->prev;
+
+      data = tmpHashRec->data;
+      XFREE( tmpHashRec->keyString );
+      XFREE( tmpHashRec );
+      hash->totalRecords--;
+      
+      return data;
+    }
+    depth++;
+    tmpHashRec = tmpHashRec->next;
+  }
+
+  return NULL;
+}
 
 /****
  *
