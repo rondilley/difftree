@@ -2,7 +2,7 @@
  *
  * Description: Directory Processing Functions
  * 
- * Copyright (c) 2009-2015, Ron Dilley
+ * Copyright (c) 2009-2018, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -185,8 +185,32 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
     if ( config->debug >=  5 )
       printf( "DEBUG - [%s]\n", fpath+compDirLen );
 
-    /* hash regular files */
-    if ( config->hash && ( tflag EQ S_IFREG ) ) {
+
+    if ( config->count && ( tflag EQ S_IFREG ) ) { /* count regular files */
+        
+      /* if not compressed */
+      if ( ( inFile = fopen( fpath, "r" ) ) EQ NULL ) {
+	fprintf( stderr, "ERR - Unable to open file [%s]\n", fpath+compDirLen );
+      } else {
+	while( ( rCount = fread( rBuf, 1, sizeof( rBuf ), inFile ) ) > 0 ) {
+#ifdef DEBUG
+	  if ( config->debug >= 6 )
+	    printf( "DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath+compDirLen );
+#endif
+        }
+	fclose( inFile );
+     
+        /* if zlib compressed */
+        
+        /* preserve atime */
+        if ( config->preserve_atime ) {
+          tmp_utimbuf.actime = sb->st_atime;
+          tmp_utimbuf.modtime = sb->st_mtime;
+          if ( utime( fpath, &tmp_utimbuf ) != 0 )
+            sprintf( "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror( errno ) );
+        }
+      }
+    } else if ( config->hash && ( tflag EQ S_IFREG ) ) {     /* hash regular files */
       if ( mode EQ FTW_RECORD ) {
 #ifdef DEBUG
 	if ( config->debug >= 3 )
@@ -511,7 +535,7 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
       XMEMCPY( tmpMD->digest, digest, sizeof( digest ) );
     }
     XMEMCPY( (void *)&tmpMD->sb, (void *)sb, sizeof( struct stat ) );
-    addUniqueHashRec( compDirHash, fpath+compDirLen, strlen( fpath+compDirLen ), tmpMD );
+    addUniqueHashRec( compDirHash, fpath+compDirLen, strlen( fpath+compDirLen )+1, tmpMD );
     /* check to see if the hash should be grown */
     compDirHash = dyGrowHash( compDirHash );
   } else {
@@ -579,7 +603,7 @@ int processRecord( const char *fpath, const struct stat *sb, char mode, unsigned
     if ( config->debug >= 5 )
       printf( "DEBUG - Adding RECORD\n" );
 #endif
-    addUniqueHashRec( compDirHash, fpath+compDirLen, strlen( fpath+compDirLen ), tmpMD );
+    addUniqueHashRec( compDirHash, fpath+compDirLen, strlen( fpath+compDirLen )+1, tmpMD );
     /* check to see if the hash should be grown */
     compDirHash = dyGrowHash( compDirHash );
   }

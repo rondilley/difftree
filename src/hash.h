@@ -83,7 +83,7 @@ struct hash_s *initHash( uint32_t hashSize );
 uint32_t searchHash( struct hash_s *hash, const void *keyString );
 void updateData( struct hash_s *hash, const void *keyString, const void *data );
 void dumpHash( struct hash_s *hash );
-struct hashRec_s *getHashRecord( struct hash_s *hash, const void *keyString );
+struct hashRec_s *getHashRecord( struct hash_s *hash, const char *keyString );
 void *getHashData( struct hash_s *hash, const void *keyString );
 struct hashRec_s *snoopHashRecord( struct hash_s *hash, const  char *keyString, int keyLen );
 struct hashRec_s *snoopHashRecWithKey( struct hash_s *hash, const  char *keyString, int keyLen, uint32_t key );

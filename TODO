@@ -5,6 +5,8 @@ Short-term:
 -----------
 * port to MinGW
 * add support for fts instead of nftw
+* add count option to count lines/size of files
+* add zlib support for counting lines/size after uncompressing
 
 Long-term:
 ----------

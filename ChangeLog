@@ -51,3 +51,7 @@
 2016-03-26  Ron Dilley <ron.dilley@uberadmin.com>
 
 	* Fixed parser bug (not handling \' properly in files) - tnx Tyler 
+
+2018-06-05  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Fixed hash off-by-one bug

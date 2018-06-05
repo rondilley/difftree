@@ -575,12 +575,23 @@ uint32_t searchHash( struct hash_s *hash, const void *keyString ) {
  *
  ****/
 
-struct hashRec_s *getHashRecord( struct hash_s *hash, const void *keyString ) {
-  uint32_t key = calcHash( hash->size, keyString );
-  int depth = 0;
-  int keyLen = strlen( keyString );
+struct hashRec_s *getHashRecord( struct hash_s *hash, const char *keyString ) {
+  uint32_t key;
+  int32_t val = 0;
+  int depth = 0, i, tmp;
+  int keyLen = strlen( keyString )+1;
   struct hashRec_s *tmpHashRec;
 
+  /* generate the lookup hash */
+  for( i = 0; i < keyLen; i++ ) {
+    val = (val << 4) + ( keyString[i] & 0xff );
+    if ((tmp = (val & 0xf0000000))) {
+      val = val ^ (tmp >> 24);
+      val = val ^ tmp;
+    }
+  }
+  key = val % hash->size;
+  
 #ifdef DEBUG
   if ( config->debug >= 3 )
     printf( "DEBUG - Getting data from hash table\n" );

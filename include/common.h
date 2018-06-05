@@ -100,6 +100,7 @@ typedef struct {
   char *domainname;
   char **exclusions;
   int debug;
+  int count;
   int hash;
   int md5_hash;
   int sha256_hash;

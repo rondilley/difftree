@@ -2,7 +2,7 @@
  *
  * Description: Difftree Functions
  * 
- * Copyright (c) 2010-2015, Ron Dilley
+ * Copyright (c) 2010-2018, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -108,6 +108,7 @@ int main(int argc, char *argv[]) {
     int option_index = 0;
     static struct option long_options[] = {
       {"atime", no_argument, 0, 'a' },
+      //{"count", no_argument, 0, 'c' },
       {"debug", required_argument, 0, 'd' },
       {"exdir", required_argument, 0, 'e' },
       {"exfile", required_argument, 0, 'E' },
@@ -132,6 +133,14 @@ int main(int argc, char *argv[]) {
       case 'a':
       /* enable atime change reporting */
       config->show_atime = TRUE;
+    
+      case 'c':
+      /* count lines and bytes */
+      config->count = TRUE;
+      config->hash = FALSE;
+      config->md5_hash = FALSE;
+      config->sha256_hash = FALSE;
+      break;
       
     case 'p':
       if ( config->uid != 0 ) {
@@ -216,7 +225,7 @@ int main(int argc, char *argv[]) {
         /* XXX problem */
       }
       XMEMSET( config->outfile, 0, MAXPATHLEN + 1 );
-      XSTRNCPY( config->outfile, optarg, MAXPATHLEN );
+      strncpy( config->outfile, optarg, MAXPATHLEN );
       break;
       
     default:
@@ -374,6 +383,7 @@ PRIVATE void print_help( void ) {
 
 #ifdef HAVE_GETOPT_LONG
   fprintf( stderr, " -a|--atime           show last access time changes (enables -p|--preserve)\n" );
+  fprintf( stderr, " -c|--count           count file lines and bytes (disables hash modes)\n" );
   fprintf( stderr, " -d|--debug (0-9)     enable debugging info\n" );
   fprintf( stderr, " -e|--exdir {dir}     exclude {dir}\n");
   fprintf( stderr, " -E|--exfile {file}   exclude directories listed in {file}\n");
@@ -386,6 +396,7 @@ PRIVATE void print_help( void ) {
   fprintf( stderr, " -w|--write {file}    write directory tree to file\n" );
 #else
   fprintf( stderr, " -a         show last access time changes (enables -p)\n" );
+  fprintf( stderr, " -c         count file lines and bytes (disables hash modes)\n" );
   fprintf( stderr, " -d {lvl}   enable debugging info\n" );
   fprintf( stderr, " -e {dir}   exclude {dir}\n");
   fprintf( stderr, " -E {file}  exclude directories listed in {file}\n");
