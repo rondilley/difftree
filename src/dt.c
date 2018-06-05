@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
     int option_index = 0;
     static struct option long_options[] = {
       {"atime", no_argument, 0, 'a' },
-      //{"count", no_argument, 0, 'c' },
+      {"count", no_argument, 0, 'c' },
       {"debug", required_argument, 0, 'd' },
       {"exdir", required_argument, 0, 'e' },
       {"exfile", required_argument, 0, 'E' },
@@ -121,9 +121,9 @@ int main(int argc, char *argv[]) {
       {"write", required_argument, 0, 'w' },
       {0, no_argument, 0, 0}
     };
-    c = getopt_long(argc, argv, "ad:e:E:hmpqsvw:", long_options, &option_index);
+    c = getopt_long(argc, argv, "acd:e:E:hmpqsvw:", long_options, &option_index);
 #else
-    c = getopt( argc, argv, "ad:e:E:hmpqsvw:" );
+    c = getopt( argc, argv, "acd:e:E:hmpqsvw:" );
 #endif
 
     if (c EQ -1)
@@ -133,14 +133,6 @@ int main(int argc, char *argv[]) {
       case 'a':
       /* enable atime change reporting */
       config->show_atime = TRUE;
-    
-      case 'c':
-      /* count lines and bytes */
-      config->count = TRUE;
-      config->hash = FALSE;
-      config->md5_hash = FALSE;
-      config->sha256_hash = FALSE;
-      break;
       
     case 'p':
       if ( config->uid != 0 ) {
@@ -152,6 +144,14 @@ int main(int argc, char *argv[]) {
       
       break;
         
+      
+    case 'c':
+      /* count lines and bytes */
+      config->count = TRUE;
+      config->hash = FALSE;
+      config->md5_hash = FALSE;
+      config->sha256_hash = FALSE;
+      break;
       
     case 'd':
       /* show debig info */
