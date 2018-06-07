@@ -186,115 +186,116 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #endif
 
   if (baseDirHash != NULL) {
-	  
-    /*
-	 * now we need to compare
-	 */
 
-#ifdef DEBUG	  
+/*
+     * now we need to compare
+     */
+
+#ifdef DEBUG
     if (config->debug >= 2)
       printf("DEBUG - Compairing [%s]\n", fpath + compDirLen);
 #endif
-	if ( tflag EQ S_IFREG ) {
-    if ( config->count ) { /* count regular files */
-      printf(".\n");
-      if (mode EQ FTW_RECORD) {
-        if (memcmp(strrchr(fpath + compDirLen, '.'), ".gz", 3)
-                EQ 0) { /* gzip compressed */
 
-        } else {
-          if ((inFile = fopen(fpath, "r")) EQ NULL) {
+    if (tflag EQ S_IFREG) {
+      if (config->count) { /* count regular files */
+        if (mode EQ FTW_RECORD) {
+          if ((((foundPtr = strrchr(fpath + compDirLen, '.')) != NULL)) &&
+              (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+            /* gzip compressed */
+            printf("Compressed\n");
+          } else {
+            if ((inFile = fopen(fpath, "r"))EQ NULL) {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n",
+                      fpath + compDirLen);
+            } else {
+              lCount = tCount = 0;
+              while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
+#ifdef DEBUG
+                if (config->debug >= 6)
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
+                         (long int)rCount, fpath + compDirLen);
+#endif
+                tCount += rCount;
+                for (i = 0; i < rCount; i++) {
+                  if (rBuf[i] EQ '\n')
+                    lCount++;
+                }
+              }
+              fclose(inFile);
+              printf("Size: %ld Lines: %ld\n", tCount, lCount);
+
+              /* preserve atime */
+              if (config->preserve_atime) {
+                tmp_utimbuf.actime = sb->st_atime;
+                tmp_utimbuf.modtime = sb->st_mtime;
+                if (utime(fpath, &tmp_utimbuf) != 0)
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                          fpath, errno, strerror(errno));
+              }
+            }
+          }
+        } else if (mode EQ FILE_RECORD) {
+        }
+      } else if (config->hash) { /* hash regular files */
+        if (mode EQ FTW_RECORD) {
+#ifdef DEBUG
+          if (config->debug >= 3)
+            printf("DEBUG - Generating hash of file [%s]\n",
+                   fpath + compDirLen);
+#endif
+          if (config->sha256_hash)
+            sha256_starts(&sha256_ctx);
+          else
+            MD5_Init(&md5_ctx);
+
+          if ((inFile = fopen(fpath, "r"))EQ NULL) {
             fprintf(stderr, "ERR - Unable to open file [%s]\n",
                     fpath + compDirLen);
           } else {
-            lCount = tCount = 0;
             while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
 #ifdef DEBUG
               if (config->debug >= 6)
                 printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount,
                        fpath + compDirLen);
 #endif
-              tCount += rCount;
-              for (i = 0; i < rCount; i++) {
-                if (rBuf[i] EQ '\n')
-                  lCount++;
-              }
-              fclose(inFile);
-              printf("Size: %ld Lines: %ld\n", tCount, lCount);
+              if (config->sha256_hash)
+                sha256_update(&sha256_ctx, rBuf, rCount);
+              else
+                MD5_Update(&md5_ctx, rBuf, rCount);
             }
-          /* preserve atime */
-          if (config->preserve_atime) {
-            tmp_utimbuf.actime = sb->st_atime;
-            tmp_utimbuf.modtime = sb->st_mtime;
-            if (utime(fpath, &tmp_utimbuf) != 0)
-              sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
-                      errno, strerror(errno));
-          }
-	  }
-		  
-        }
-      } else if (mode EQ FILE_RECORD) {
-		  
-      }
-    } else if (config->hash ) { /* hash regular files */
-      if (mode EQ FTW_RECORD) {
-#ifdef DEBUG
-        if (config->debug >= 3)
-          printf("DEBUG - Generating hash of file [%s]\n", fpath + compDirLen);
-#endif
-        if (config->sha256_hash)
-          sha256_starts(&sha256_ctx);
-        else
-          MD5_Init(&md5_ctx);
+            fclose(inFile);
 
-        if ((inFile = fopen(fpath, "r")) EQ NULL) {
-          fprintf(stderr, "ERR - Unable to open file [%s]\n",
-                  fpath + compDirLen);
-        } else {
-          while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
+            /* preserve atime */
+            if (config->preserve_atime) {
+              tmp_utimbuf.actime = sb->st_atime;
+              tmp_utimbuf.modtime = sb->st_mtime;
+              if (utime(fpath, &tmp_utimbuf) != 0)
+                sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
+                        errno, strerror(errno));
+            }
+
+            /* complete hash */
+            if (config->sha256_hash)
+              sha256_finish(&sha256_ctx, digest);
+            else
+              MD5_Final(digest, &md5_ctx);
+          }
+        } else if (mode EQ FILE_RECORD) {
+          if (digestPtr != NULL) {
 #ifdef DEBUG
-            if (config->debug >= 6)
-              printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount,
+            if (config->debug >= 3)
+              printf("DEBUG - Loading previously generated hash of file [%s]\n",
                      fpath + compDirLen);
 #endif
-            if (config->sha256_hash)
-              sha256_update(&sha256_ctx, rBuf, rCount);
-            else
-              MD5_Update(&md5_ctx, rBuf, rCount);
+            XMEMCPY(digest, digestPtr, config->digest_size);
           }
-          fclose(inFile);
-
-          /* preserve atime */
-          if (config->preserve_atime) {
-            tmp_utimbuf.actime = sb->st_atime;
-            tmp_utimbuf.modtime = sb->st_mtime;
-            if (utime(fpath, &tmp_utimbuf) != 0)
-              sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
-                      errno, strerror(errno));
-          }
-
-          /* complete hash */
-          if (config->sha256_hash)
-            sha256_finish(&sha256_ctx, digest);
-          else
-            MD5_Final(digest, &md5_ctx);
+        } else {
+          /* unknown record type */
         }
-      } else if (mode EQ FILE_RECORD) {
-        if (digestPtr != NULL) {
-#ifdef DEBUG
-          if (config->debug >= 3)
-            printf("DEBUG - Loading previously generated hash of file [%s]\n",
-                   fpath + compDirLen);
-#endif
-          XMEMCPY(digest, digestPtr, config->digest_size);
-        }
-      } else {
-        /* unknown record type */
       }
     }
-}
 
-    if ((tmpRec = getHashRecord(baseDirHash, fpath + compDirLen)) EQ NULL) {
+    if ((tmpRec = getHashRecord(baseDirHash, fpath + compDirLen))EQ NULL) {
       printf("+ %s [%s]\n",
              (tflag == S_IFDIR)
                  ? "d"
@@ -484,19 +485,19 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #else
                   (tmpSb->st_mode & S_IRUSR) ? 'r' : '-',
                   (tmpSb->st_mode & S_IWUSR) ? 'w' : '-',
-                  (tmpSb->st_mode & S_ISUID)
-                      ? 's'
-                      : (tmpSb->st_mode & S_IXUSR) ? 'x' : '-',
+                  (tmpSb->st_mode & S_ISUID) ? 's' : (tmpSb->st_mode & S_IXUSR)
+                                                         ? 'x'
+                                                         : '-',
                   (tmpSb->st_mode & S_IRGRP) ? 'r' : '-',
                   (tmpSb->st_mode & S_IWGRP) ? 'w' : '-',
-                  (tmpSb->st_mode & S_ISGID)
-                      ? 's'
-                      : (tmpSb->st_mode & S_IXGRP) ? 'x' : '-',
+                  (tmpSb->st_mode & S_ISGID) ? 's' : (tmpSb->st_mode & S_IXGRP)
+                                                         ? 'x'
+                                                         : '-',
                   (tmpSb->st_mode & S_IROTH) ? 'r' : '-',
                   (tmpSb->st_mode & S_IWOTH) ? 'w' : '-',
-                  (tmpSb->st_mode & S_ISVTX)
-                      ? 's'
-                      : (tmpSb->st_mode & S_IXOTH) ? 'x' : '-',
+                  (tmpSb->st_mode & S_ISVTX) ? 's' : (tmpSb->st_mode & S_IXOTH)
+                                                         ? 'x'
+                                                         : '-',
 #endif
 #ifdef MINGW
                    (sb->st_mode & S_IREAD) ? 'r' : '-',
@@ -506,18 +507,18 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #else
                   (sb->st_mode & S_IRUSR) ? 'r' : '-',
                   (sb->st_mode & S_IWUSR) ? 'w' : '-',
-                  (sb->st_mode & S_ISUID) ? 's'
-                                          : (sb->st_mode & S_IXUSR) ? 'x' : '-',
+                  (sb->st_mode & S_ISUID) ? 's' : (sb->st_mode & S_IXUSR) ? 'x'
+                                                                          : '-',
                   (sb->st_mode & S_IRGRP) ? 'r' : '-',
                   (sb->st_mode & S_IWGRP) ? 'w' : '-',
-                  (sb->st_mode & S_ISGID) ? 's'
-                                          : (sb->st_mode & S_IXGRP) ? 'x' : '-',
+                  (sb->st_mode & S_ISGID) ? 's' : (sb->st_mode & S_IXGRP) ? 'x'
+                                                                          : '-',
                   (sb->st_mode & S_IROTH) ? 'r' : '-',
                   (sb->st_mode & S_IWOTH) ? 'w' : '-',
-                  (sb->st_mode & S_ISVTX) ? 's'
-                                          : (sb->st_mode & S_IXOTH) ? 'x' : '-'
+                  (sb->st_mode & S_ISVTX) ? 's' : (sb->st_mode & S_IXOTH) ? 'x'
+                                                                          : '-'
 #endif
-          );
+                   );
 #ifdef HAVE_STRNCAT
           strncat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
 #else
@@ -637,114 +638,116 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
     /* check to see if the hash should be grown */
     compDirHash = dyGrowHash(compDirHash);
   } else {
-	 
-    /*
-	 * store file metadata
-	 */
 
-#ifdef DEBUG	
+/*
+     * store file metadata
+     */
+
+#ifdef DEBUG
     if (config->debug >= 2)
       printf("DEBUG - Scanning [%s]\n", fpath + compDirLen);
 #endif
-	
+
     tmpMD = (metaData_t *)XMALLOC(sizeof(metaData_t));
     XMEMSET(tmpMD, 0, sizeof(metaData_t));
 
-    if (config->count && (tflag EQ S_IFREG)) { /* count regular files */
-      if (mode EQ FTW_RECORD) {
-        if (memcmp(strrchr(fpath + compDirLen, '.'), ".gz", 3)
-                EQ 0) { /* gzip compressed */
-		  printf( "Compressed\n");
-        } else {
-          if ((inFile = fopen(fpath, "r")) EQ NULL) {
+    if (tflag EQ S_IFREG) {
+      if (config->count) { /* count regular files */
+        if (mode EQ FTW_RECORD) {
+          if ((((foundPtr = strrchr(fpath + compDirLen, '.')) != NULL)) &&
+              (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+            /* gzip compressed */
+
+            printf("Compressed\n");
+          } else {
+            if ((inFile = fopen(fpath, "r"))EQ NULL) {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n",
+                      fpath + compDirLen);
+            } else {
+              lCount = tCount = 0;
+              while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
+#ifdef DEBUG
+                if (config->debug >= 6)
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
+                         (long int)rCount, fpath + compDirLen);
+#endif
+                tCount += rCount;
+                for (i = 0; i < rCount; i++) {
+                  if (rBuf[i] EQ '\n')
+                    lCount++;
+                }
+              }
+              fclose(inFile);
+              printf("Name: %s Size: %lu Lines: %lu\n", fpath, tCount, lCount);
+
+              /* preserve atime */
+              if (config->preserve_atime) {
+                tmp_utimbuf.actime = sb->st_atime;
+                tmp_utimbuf.modtime = sb->st_mtime;
+                if (utime(fpath, &tmp_utimbuf) != 0)
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                          fpath, errno, strerror(errno));
+              }
+            }
+          }
+        } else if (mode EQ FILE_RECORD) {
+        }
+      } else if (config->hash) { /* hash regular files */
+        if (mode EQ FTW_RECORD) {
+#ifdef DEBUG
+          if (config->debug >= 3)
+            printf("DEBUG - Generating hash of file [%s]\n",
+                   fpath + compDirLen);
+#endif
+          if (config->sha256_hash)
+            sha256_starts(&sha256_ctx);
+          else
+            MD5_Init(&md5_ctx);
+
+          if ((inFile = fopen(fpath, "r"))EQ NULL) {
             fprintf(stderr, "ERR - Unable to open file [%s]\n",
                     fpath + compDirLen);
           } else {
-            lCount = tCount = 0;
             while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
 #ifdef DEBUG
               if (config->debug >= 6)
                 printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount,
                        fpath + compDirLen);
 #endif
-            }
-            tCount += rCount;
-            for (i = 0; i < rCount; i++) {
-              if (rBuf[i] EQ '\n')
-                lCount++;
+              if (config->sha256_hash)
+                sha256_update(&sha256_ctx, rBuf, rCount);
+              else
+                MD5_Update(&md5_ctx, rBuf, rCount);
             }
             fclose(inFile);
-            printf("Size: %lu Lines: %lu\n", tCount, lCount);
+
+            /* preserve atime */
+            if (config->preserve_atime) {
+              tmp_utimbuf.actime = sb->st_atime;
+              tmp_utimbuf.modtime = sb->st_mtime;
+              if (utime(fpath, &tmp_utimbuf) != 0)
+                sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
+                        errno, strerror(errno));
+            }
+
+            /* finalize hash */
+            if (config->sha256_hash)
+              sha256_finish(&sha256_ctx, digest);
+            else
+              MD5_Final(digest, &md5_ctx);
           }
-
-          /* preserve atime */
-          if (config->preserve_atime) {
-            tmp_utimbuf.actime = sb->st_atime;
-            tmp_utimbuf.modtime = sb->st_mtime;
-            if (utime(fpath, &tmp_utimbuf) != 0)
-              sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
-                      errno, strerror(errno));
-          }
-        }
-      } else if (mode EQ FILE_RECORD) {
-
-      }
-    } else if (config->hash && (tflag EQ S_IFREG)) { /* hash regular files */
-      if (mode EQ FTW_RECORD) {
+        } else if (mode EQ FILE_RECORD) {
+          if (digestPtr != NULL) {
 #ifdef DEBUG
-        if (config->debug >= 3)
-          printf("DEBUG - Generating hash of file [%s]\n", fpath + compDirLen);
-#endif
-        if (config->sha256_hash)
-          sha256_starts(&sha256_ctx);
-        else
-          MD5_Init(&md5_ctx);
-
-        if ((inFile = fopen(fpath, "r")) EQ NULL) {
-          fprintf(stderr, "ERR - Unable to open file [%s]\n",
-                  fpath + compDirLen);
-        } else {
-          while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
-#ifdef DEBUG
-            if (config->debug >= 6)
-              printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount,
+            if (config->debug >= 3)
+              printf("DEBUG - Loading previously generated MD5 of file [%s]\n",
                      fpath + compDirLen);
 #endif
-            if (config->sha256_hash)
-              sha256_update(&sha256_ctx, rBuf, rCount);
-            else
-              MD5_Update(&md5_ctx, rBuf, rCount);
+            XMEMCPY(digest, digestPtr, sizeof(digest));
           }
-          fclose(inFile);
-
-          /* preserve atime */
-          if (config->preserve_atime) {
-            tmp_utimbuf.actime = sb->st_atime;
-            tmp_utimbuf.modtime = sb->st_mtime;
-            if (utime(fpath, &tmp_utimbuf) != 0)
-              sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
-                      errno, strerror(errno));
-          }
-
-          /* finalize hash */
-          if (config->sha256_hash)
-            sha256_finish(&sha256_ctx, digest);
-          else
-            MD5_Final(digest, &md5_ctx);
         }
-      } else if (mode EQ FILE_RECORD) {
-        if (digestPtr != NULL) {
-#ifdef DEBUG
-          if (config->debug >= 3)
-            printf("DEBUG - Loading previously generated MD5 of file [%s]\n",
-                   fpath + compDirLen);
-#endif
-          XMEMCPY(digest, digestPtr, sizeof(digest));
-        }
-      } else {
-        /* unknown record type */
+        XMEMCPY(tmpMD->digest, digest, sizeof(digest));
       }
-      XMEMCPY(tmpMD->digest, digest, sizeof(digest));
     }
 
     XMEMCPY((void *)&tmpMD->sb, (void *)sb, sizeof(struct stat));
@@ -780,7 +783,7 @@ PUBLIC int processDir(char *startDirStr) {
       compDirLen = 0;
       XSTRNCPY(dirStr, startDirStr, PATH_MAX);
       printf("Processing file [%s]\n", dirStr);
-      if ((ret = loadFile(dirStr)) EQ(-1)) {
+      if ((ret = loadFile(dirStr))EQ(-1)) {
         fprintf(stderr, "ERR - Problem while loading file\n");
         return (FAILED);
       } else if (ret EQ FTW_STOP) {
@@ -804,10 +807,10 @@ PUBLIC int processDir(char *startDirStr) {
 
 #ifdef HAVE_NFTW
       if ((ret = nftw(dirStr, processFtwRecord, 20,
-                      FTW_PHYS | FTW_ACTIONRETVAL)) EQ(-1)) {
+                      FTW_PHYS | FTW_ACTIONRETVAL))EQ(-1)) {
 #else
       if ((ret = noftw(dirStr, processFtwRecord, 20,
-                       FTW_PHYS | FTW_ACTIONRETVAL)) EQ(-1)) {
+                       FTW_PHYS | FTW_ACTIONRETVAL))EQ(-1)) {
 #endif
         fprintf(stderr, "ERR - Unable to open dir [%s]\n", dirStr);
         return (FAILED);
@@ -858,7 +861,7 @@ int findMissingFiles(const struct hashRec_s *hashRec) {
     printf("DEBUG - Searching for [%s]\n", hashRec->keyString);
 #endif
 
-  if ((tmpRec = getHashRecord(compDirHash, hashRec->keyString)) EQ NULL) {
+  if ((tmpRec = getHashRecord(compDirHash, hashRec->keyString))EQ NULL) {
     tmpMD = (metaData_t *)hashRec->data;
     tmpSb = (struct stat *)&tmpMD->sb;
     tflag = tmpSb->st_mode & S_IFMT;
