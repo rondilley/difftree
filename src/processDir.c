@@ -104,6 +104,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
   MD5_CTX md5_ctx;
   sha256_context sha256_ctx;
   FILE *inFile;
+  gzFile gzInFile;
   size_t rCount, lCount, tCount;
   unsigned char rBuf[16384];
   unsigned char digest[32];
@@ -187,7 +188,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 
   if (baseDirHash != NULL) {
 
-/*
+    /*
      * now we need to compare
      */
 
@@ -202,7 +203,39 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
           if ((((foundPtr = strrchr(fpath + compDirLen, '.')) != NULL)) &&
               (strncmp(foundPtr, ".gz", 3) EQ 0)) {
             /* gzip compressed */
-            printf("Compressed\n");
+            if ((gzInFile = gzopen(fpath, "rb"))EQ NULL) {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n",
+                      fpath + compDirLen);
+            } else {
+              lCount = tCount = 0;
+              while ((rCount = gzread(gzInFile, rBuf, sizeof(rBuf))) > 0) {
+#ifdef DEBUG
+                if (config->debug >= 6)
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
+                         (long int)rCount, fpath + compDirLen);
+#endif
+                tCount += rCount;
+                for (i = 0; i < rCount; i++) {
+                  if (rBuf[i] EQ '\n')
+                    lCount++;
+                }
+              }
+              gzclose(gzInFile);
+#ifdef DEBUG
+			  if ( config->debug >= 3 )
+				  printf("Size: %ld Lines: %ld\n", tCount, lCount);
+#endif
+			  
+			  
+              /* preserve atime */
+              if (config->preserve_atime) {
+                tmp_utimbuf.actime = sb->st_atime;
+                tmp_utimbuf.modtime = sb->st_mtime;
+                if (utime(fpath, &tmp_utimbuf) != 0)
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                          fpath, errno, strerror(errno));
+              }
+            }
           } else {
             if ((inFile = fopen(fpath, "r"))EQ NULL) {
               fprintf(stderr, "ERR - Unable to open file [%s]\n",
@@ -222,8 +255,12 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
                 }
               }
               fclose(inFile);
-              printf("Size: %ld Lines: %ld\n", tCount, lCount);
 
+#ifdef DEBUG
+			  if (config->debug >= 3)
+				  printf("Size: %ld Lines: %ld\n", tCount, lCount);
+#endif
+			  
               /* preserve atime */
               if (config->preserve_atime) {
                 tmp_utimbuf.actime = sb->st_atime;
@@ -639,8 +676,8 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
     compDirHash = dyGrowHash(compDirHash);
   } else {
 
-/*
-     * store file metadata
+    /*
+     * first time through a directory
      */
 
 #ifdef DEBUG
@@ -658,7 +695,42 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
               (strncmp(foundPtr, ".gz", 3) EQ 0)) {
             /* gzip compressed */
 
-            printf("Compressed\n");
+            if ((gzInFile = gzopen(fpath, "rb"))EQ NULL) {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n",
+                      fpath + compDirLen);
+            } else {
+              lCount = tCount = 0;
+              while ((rCount = gzread(gzInFile, rBuf, sizeof(rBuf))) > 0) {
+#ifdef DEBUG
+                if (config->debug >= 6)
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
+                         (long int)rCount, fpath + compDirLen);
+#endif
+                tCount += rCount;
+                for (i = 0; i < rCount; i++) {
+                  if (rBuf[i] EQ '\n')
+                    lCount++;
+                }
+              }
+              gzclose(gzInFile);
+
+			  tmpMD->byteCount = tCount;
+			  tmpMD->lineCount = lCount;
+			  
+#ifdef DEBUG
+			  if (config->debug >= 3)
+				  printf("Size: %ld Lines: %ld\n", tCount, lCount);
+#endif
+			  
+              /* preserve atime */
+              if (config->preserve_atime) {
+                tmp_utimbuf.actime = sb->st_atime;
+                tmp_utimbuf.modtime = sb->st_mtime;
+                if (utime(fpath, &tmp_utimbuf) != 0)
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                          fpath, errno, strerror(errno));
+              }
+            }
           } else {
             if ((inFile = fopen(fpath, "r"))EQ NULL) {
               fprintf(stderr, "ERR - Unable to open file [%s]\n",
@@ -678,8 +750,15 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
                 }
               }
               fclose(inFile);
-              printf("Name: %s Size: %lu Lines: %lu\n", fpath, tCount, lCount);
-
+			  
+			  tmpMD->byteCount = tCount;
+			  tmpMD->lineCount = lCount;
+			  
+#ifdef DEBUG
+			  if ( config->debug >= 3 )
+				  printf("Name: %s Size: %lu Lines: %lu\n", fpath, tCount, lCount);
+#endif
+			  
               /* preserve atime */
               if (config->preserve_atime) {
                 tmp_utimbuf.actime = sb->st_atime;

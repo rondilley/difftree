@@ -53,6 +53,7 @@
 #if ! defined HAVE_FTW  && ! defined HAVE_NFTW
 # include "noftw.h"
 #endif
+#include <zlib.h> // need to move to autoconf
 #include "util.h"
 #include "mem.h"
 #include "hash.h"
@@ -75,6 +76,8 @@
 
 typedef struct {
   struct stat sb;
+  size_t byteCount;
+  size_t lineCount;
   unsigned char digest[32]; // large enough to hold a sha256 digest
 } metaData_t;
 

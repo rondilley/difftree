@@ -123,7 +123,9 @@ int writeRecord2File(const struct hashRec_s *hashRec) {
 #ifndef MINGW
   fprintf(out, "BLOCKS=%ld|", (long int)tmpSb->st_blocks);
 #endif
-  if (config->hash && (tflag EQ S_IFREG)) {
+  if (config->count && (tflag EQ S_IFREG)) {
+	  fprintf( out, "BYTECOUNT=%ld|LINECOUNT=%ld|",tmpMD->byteCount,tmpMD->lineCount);
+  } else if (config->hash && (tflag EQ S_IFREG)) {
     if (config->sha256_hash)
       fprintf(out, "SHA256=\"%s\"|",
               hash2hex(tmpMD->digest, tmpBuf, config->digest_size));
@@ -169,7 +171,7 @@ int writeDirHash2File(const struct hash_s *dirHash, const char *base,
   fprintf(out, "VER=%s\n", FORMAT_VERSION);
   fprintf(out, "BASE=%s\n", base);
   fprintf(out, "MODE=%s\n",
-          (config->hash) ? "HASH" : (config->quick) ? "QUICK" : "NORMAL");
+          (config->hash) ? "HASH" : (config->quick) ? "QUICK" : (config->count) ? "COUNT" : "NORMAL");
   tmPtr = localtime(&config->current_time);
   fprintf(out, "START=\"%04d/%02d/%02d@%02d:%02d:%02d\"\n",
           tmPtr->tm_year + 1900, tmPtr->tm_mon + 1, tmPtr->tm_mday,
