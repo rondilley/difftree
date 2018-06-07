@@ -181,16 +181,22 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
   }
 
 #ifdef DEBUG
-  if (config->debug >= 3)
+  if (config->debug >= 1)
     printf("DEBUG - Processing File [%s]\n", fpath + compDirLen);
 #endif
 
   if (baseDirHash != NULL) {
-    /* compare */
-    if (config->debug >= 5)
-      printf("DEBUG - [%s]\n", fpath + compDirLen);
+	  
+    /*
+	 * now we need to compare
+	 */
 
-    if (config->count && (tflag EQ S_IFREG)) { /* count regular files */
+#ifdef DEBUG	  
+    if (config->debug >= 2)
+      printf("DEBUG - Compairing [%s]\n", fpath + compDirLen);
+#endif
+	if ( tflag EQ S_IFREG ) {
+    if ( config->count ) { /* count regular files */
       printf(".\n");
       if (mode EQ FTW_RECORD) {
         if (memcmp(strrchr(fpath + compDirLen, '.'), ".gz", 3)
@@ -216,7 +222,6 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
               fclose(inFile);
               printf("Size: %ld Lines: %ld\n", tCount, lCount);
             }
-          }
           /* preserve atime */
           if (config->preserve_atime) {
             tmp_utimbuf.actime = sb->st_atime;
@@ -225,10 +230,13 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
               sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
                       errno, strerror(errno));
           }
+	  }
+		  
         }
       } else if (mode EQ FILE_RECORD) {
+		  
       }
-    } else if (config->hash && (tflag EQ S_IFREG)) { /* hash regular files */
+    } else if (config->hash ) { /* hash regular files */
       if (mode EQ FTW_RECORD) {
 #ifdef DEBUG
         if (config->debug >= 3)
@@ -284,6 +292,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
         /* unknown record type */
       }
     }
+}
 
     if ((tmpRec = getHashRecord(baseDirHash, fpath + compDirLen)) EQ NULL) {
       printf("+ %s [%s]\n",
@@ -628,7 +637,16 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
     /* check to see if the hash should be grown */
     compDirHash = dyGrowHash(compDirHash);
   } else {
-    /* store file metadata */
+	 
+    /*
+	 * store file metadata
+	 */
+
+#ifdef DEBUG	
+    if (config->debug >= 2)
+      printf("DEBUG - Scanning [%s]\n", fpath + compDirLen);
+#endif
+	
     tmpMD = (metaData_t *)XMALLOC(sizeof(metaData_t));
     XMEMSET(tmpMD, 0, sizeof(metaData_t));
 
