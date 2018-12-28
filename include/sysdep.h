@@ -62,6 +62,10 @@
 # include <ftw.h>
 #endif
 
+#ifdef HAVE_ZLIB_H
+# include <zlib.h>
+#endif
+
 #ifdef HAVE_NDIR_H
 # include <ndir.h>
 #endif

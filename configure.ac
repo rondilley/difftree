@@ -209,6 +209,8 @@ AC_CHECK_FUNCS([realpath])
 AC_CHECK_FUNCS([strstr])
 AC_CHECK_FUNCS([utime])
 AC_CHECK_FUNCS([getopt_long])
+AC_CHECK_FUNCS([strerror])
+AC_CHECK_FUNCS([strrchr])
 
 dnl ############## Type checks
 
