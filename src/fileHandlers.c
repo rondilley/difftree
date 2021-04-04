@@ -472,7 +472,9 @@ int loadV1File(FILE *inFile) {
         } else if (strcmp(inBuf, "KEY") EQ 0) {
           getParsedField(inBuf, sizeof(inBuf), i + 1);
           if (strlen(inBuf) > 0) {
-            snprintf(keyString, sizeof(keyString), "%s", inBuf);
+            if ( snprintf(keyString, sizeof(keyString), "%s", inBuf) EQ sizeof(keyString) ){
+              fprintf(stderr, "WARN - Key may have been truncated\n");
+            };
 #ifdef DEBUG
             if (config->debug >= 5)
               printf("DEBUG - KEY=%s\n", keyString);
