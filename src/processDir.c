@@ -34,8 +34,6 @@
  *
  ****/
 
-FILE *out;
-
 /****
  *
  * global variables
