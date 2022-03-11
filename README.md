@@ -70,6 +70,46 @@ sys     0m34.487s
 
 ## Implimentation
 
+The output from dt describes all the detected differences found:
+
+### Interpreting difftree output
+
+Any changes are noted as {type}[{old}->{new}] and a file can have multiple
+changes.
+
+The change types are as follows:
+
+| symbol | meaning |
+| ------:| ------- |
+|+ | New file |
+|- | Missing file |
+|s | Size changed |
+|u | UID changed |
+|g | GID changed |
+|p | Permissions changed |
+|mt | Modify time changed |
+|at | Access time changed |
+|ct | Create time changed (disabled) |
+|md5 | File hash has changed |
+|sha256 | File hash has changed |
+
+The second column is the file type:
+-----------------------------------
+
+| symbol | meaning |
+| ------:| ------- |
+|f | File |
+|d | Directory |
+|sl | Soft Link |
+|blk | Block device |
+|fifo | FIFO |
+|chr | Character device |
+|sok | Socket |
+
+The third column is the fully qualified filename.
+
+### difftree examples
+
 Here is an example of running dt against a set of directories.
 Each directory passed to dt will be compared to the previous
 argument.  This allows a quick comparison between each directory
@@ -111,9 +151,9 @@ Here is an example of running dt against a directory tree and saving the data:
 
 ```
 % ./dt -m -w cvs_dir.txt ~/cvs
-```
 
 Processing dir [/home/rdilley/cvs]
+```
 
 You can then use the file as one of the directory arguments to compare an existing
 directory to the one previously saves with the '-w' option.
@@ -165,7 +205,8 @@ to the current directory tree, or any other point that you have stored.
 % ./dt -m -w cvs_dir.`date '+%Y%m%d%H%M%S'`.txt ~/cvs
 ```
 
-If you want a quick way to monitor changes to your UNIX system over time, you can do the following:
+If you want a quick way to monitor changes to your UNIX system over time, you can
+run the following script from cron once per day:
 
 ```
 #!/bin/sh
@@ -197,45 +238,40 @@ fi
 exit
 ```
 
-Any changes are noted as {type}[{old}->{new}] and a file can have multiple
-changes.
+The output sent to the root user's e-mail address can look something like this:
 
-The change types are as follows:
-
-| symbol | meaning |
-| ------:| ------- |
-|+ | New file |
-|- | Missing file |
-|s | Size changed |
-|u | UID changed |
-|g | GID changed |
-|p | Permissions changed |
-|mt | Modify time changed |
-|at | Access time changed |
-|ct | Create time changed (disabled) |
-|md5 | File hash has changed |
-|sha256 | File hash has changed |
-
-The second column is the file type:
------------------------------------
-
-| symbol | meaning |
-| ------:| ------- |
-|f | File |
-|d | Directory |
-|sl | Soft Link |
-|blk | Block device |
-|fifo | FIFO |
-|chr | Character device |
-|sok | Socket |
-
-The third column is the fully qualified filename.
+```
+Processing file [/root/dt/root_dir.current]
+Read [301847] and loaded [301847] lines from file about [/] dated [2022/03/11@10:10:32]
+Processing dir [/]
+mt[2022/03/11@10:10:32->2022/03/11@10:14:23] d [/tmp]
+md5[55bab7730bbefcdd39c5cbdc2d0d2ef3->088617c72b9ad708c2112aa886950864] f [/swapfile]
+mt[2022/03/11@00:36:27->2022/03/11@10:14:20] d [/usr/local/bin]
+s[412424->372528] mt[2022/03/11@00:36:27->2022/03/11@10:14:20] f [/usr/local/bin/dt]
+mt[2022/03/11@00:36:27->2022/03/11@10:14:20] d [/usr/local/share/man/man1]
+mt[2022/03/11@00:36:27->2022/03/11@10:14:20] f [/usr/local/share/man/man1/dt.1]
+md5[7c922ffc3587b5683e9d2093ba8fa7a9->e02bcdaac5a73fa7235180cae7362adf] mt[2022/03/11@10:10:32->2022/03/11@10:14:23] f [/var/lib/fail2ban/fail2ban.sqlite3]
+mt[2022/03/11@10:07:50->2022/03/11@10:12:50] d [/var/lib/NetworkManager]
+md5[44c64a176f02f53aada6312aec6e08d1->75e80cb0b88aa8ec115a3b0d4af64175] mt[2022/03/11@10:07:50->2022/03/11@10:12:50] f [/var/lib/NetworkManager/timestamps]
+mt[2022/03/11@07:35:48->2022/03/11@10:13:15] d [/var/spool/postfix/active]
+mt[2022/03/11@07:35:47->2022/03/11@10:13:15] d [/var/spool/postfix/maildrop]
+mt[2022/03/11@07:35:47->2022/03/11@10:13:15] d [/var/spool/postfix/incoming]
+mt[2022/03/11@07:35:48->2022/03/11@10:13:15] d [/var/mail]
+s[2422->7676] mt[2022/03/11@07:35:48->2022/03/11@10:13:15] f [/var/mail/rdilley]
+mt[2022/03/11@10:12:16->2022/03/11@10:13:53] d [/dev/shm]
+mt[2022/03/11@10:12:08->2022/03/11@10:15:46] chr [/dev/pts/2]
+mt[2022/03/11@10:10:32->2022/03/11@10:14:16] chr [/dev/pts/0]
+mt[2022/03/11@10:10:32->2022/03/11@10:14:16] chr [/dev/ptmx]
+mt[2022/03/11@01:16:39->2022/03/11@10:13:15] d [/root/dt]
+mt[2022/03/11@01:16:39->2022/03/11@10:13:15] sl [/root/dt/root_dir.current]
++ f [root/dt/root_dir.20220311101032.dt]
+```
 
 dt comes with a minimal set of options as follows:
 
 ```
 % dt --help
-dt v1.0.0 [Mar 10 2022 - 18:12:06]
+dt v1.0.1 [Mar 10 2022 - 18:12:06]
 
 syntax: difftree [options] {dir}|{file} [{dir} ...]
  -a|--atime           show last access time changes (enables -p|--preserve)

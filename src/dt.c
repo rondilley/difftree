@@ -301,7 +301,10 @@ int main(int argc, char *argv[])
    *
    ****/
 
+#ifdef DEBUG
   show_info();
+#endif
+
   if ((baseDir = (char *)XMALLOC(PATH_MAX)) EQ NULL)
   {
     fprintf(stderr, "ERR - Unable to allocate memory for baseDir string\n");
