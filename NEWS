@@ -50,3 +50,13 @@ Version 0.6.0 (December 29, 2017):
 Version 0.6.1 (June 5, 2018):
 
 * Minor bug fixes
+
+Version 0.6.3 (March 1, 2022):
+
+* Updated hash and parser code and minor bug fixes
+
+Version 1.0.0 (March 4, 2022):
+
+* Improved exclude functionality
+* Minor memory leak fixed
+* Addressed nftw() uninitilized stat struct

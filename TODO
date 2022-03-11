@@ -3,7 +3,6 @@ difftree TODO list
 
 Short-term:
 -----------
-* port to MinGW
 * add support for fts instead of nftw
 * add count option to count lines/size of files
 * add zlib support for counting lines/size after uncompressing
@@ -11,4 +10,3 @@ Short-term:
 Long-term:
 ----------
 * add checksumming of file saved with -w
-* add client/server functionality

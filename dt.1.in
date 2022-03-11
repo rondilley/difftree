@@ -1,4 +1,4 @@
-.TH DT 1  "29 December 2015" "dt @VERSION@" "dt @VERSION@"
+.TH DT 1  "01 March 2022" "dt @VERSION@" "dt @VERSION@"
 .SH NAME
 dt \- Diff directory tree.
 .SH SYNOPSIS

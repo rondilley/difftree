@@ -1,0 +1,6 @@
+/proc
+/run
+/sys
+/snap
+/home
+/var/log

@@ -2,7 +2,7 @@
  *
  * Description: Difftree Functions
  *
- * Copyright (c) 2010-2018, Ron Dilley
+ * Copyright (c) 2010-2022, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,10 +26,12 @@
  *
  ****/
 
+#include "dt.h"
+#include "mem.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "dt.h"
+#include <signal.h>
 
 /****
  *
@@ -70,7 +72,8 @@ extern char **environ;
  *
  ****/
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   PRIVATE int pid = 0;
   PRIVATE int c = 0, i = 0, fds = 0, status = 0;
   int digit_optind = 0;
@@ -81,6 +84,8 @@ int main(int argc, char *argv[]) {
   char *pid_file = NULL;
   char *user = NULL;
   char *group = NULL;
+  char **tmpExclPtr = NULL;
+
 #ifdef LINUX
   struct rlimit rlim;
 
@@ -102,7 +107,8 @@ int main(int argc, char *argv[]) {
   config->gid = getgid();
   config->uid = getuid();
 
-  while (1) {
+  while (1)
+  {
     int this_option_optind = optind ? optind : 1;
 #ifdef HAVE_GETOPT_LONG
     int option_index = 0;
@@ -120,8 +126,7 @@ int main(int argc, char *argv[]) {
         {"version", no_argument, 0, 'v'},
         {"write", required_argument, 0, 'w'},
         {0, no_argument, 0, 0}};
-    c = getopt_long(argc, argv, "acd:e:E:hmpqsvw:", long_options,
-                    &option_index);
+    c = getopt_long(argc, argv, "acd:e:E:hmpqsvw:", long_options, &option_index);
 #else
     c = getopt(argc, argv, "acd:e:E:hmpqsvw:");
 #endif
@@ -129,13 +134,15 @@ int main(int argc, char *argv[]) {
     if (c EQ - 1)
       break;
 
-    switch (c) {
+    switch (c)
+    {
     case 'a':
       /* enable atime change reporting */
       config->show_atime = TRUE;
 
     case 'p':
-      if (config->uid != 0) {
+      if (config->uid != 0)
+      {
         fprintf(stderr,
                 "ERR - Insufficient priviledges to preserve ATIME, aborting\n");
         print_help();
@@ -161,31 +168,50 @@ int main(int argc, char *argv[]) {
 
     case 'e':
       /* exclude a specific directory from the diff */
-      if ((config->exclusions = (char **)XMALLOC(sizeof(char *) * 2)) EQ NULL) {
-        fprintf(stderr, "ERR - Unable to allocate memory for exclusion list\n");
-        return (EXIT_FAILURE);
+      if (config->exclusions EQ NULL)
+      {
+        if ((config->exclusions = (char **)XMALLOC(sizeof(char *) * 2)) EQ NULL)
+        {
+          fprintf(stderr, "ERR - Unable to allocate memory for exclusion list\n");
+          return (EXIT_FAILURE);
+        }
+        XMEMSET(config->exclusions, 0, sizeof(char *) * 2);
       }
-      if ((config->exclusions[0] = XMALLOC(MAXPATHLEN + 1)) EQ NULL) {
-        fprintf(stderr, "ERR - Unable to allocate memory for exclusion list\n");
+
+      for (i = 0; config->exclusions[i] != NULL; i++)
+      {
+#ifdef DEBUG
+        if (config->debug >= 5)
+          printf("DEBUG - Exclusion [%s]\n", config->exclusions[i]);
+#endif
+      }
+
+      if ((config->exclusions[i] = XMALLOC(MAXPATHLEN + 1)) EQ NULL)
+      {
+        fprintf(stderr, "ERR - Unable to allocate memory for exclusion entry\n");
+        while (--i != 0)
+          XFREE(config->exclusions[i]);
         XFREE(config->exclusions);
         return (EXIT_FAILURE);
       }
-      if (optarg[0] != '/') {
-        config->exclusions[0][0] = '/';
-        XSTRNCPY(config->exclusions[0] + 1, optarg, MAXPATHLEN - 1);
-      } else
-        XSTRNCPY(config->exclusions[0], optarg, MAXPATHLEN);
-      config->exclusions[1] = 0;
+      if ((tmpExclPtr = XREALLOC(config->exclusions, sizeof(char *) * (i + 2))) EQ NULL)
+      {
+        fprintf(stderr, "ERR - Unable to allocate memory for exclusion list\n");
+        while (--i != 0)
+          XFREE(config->exclusions[i]);
+        XFREE(config->exclusions);
+        return (EXIT_FAILURE);
+      }
+      config->exclusions = tmpExclPtr;
+      XSTRNCPY(config->exclusions[i], optarg, MAXPATHLEN);
+      config->exclusions[i + 1] = NULL;
       break;
 
     case 'E':
       /* exclude a list of directories in the specific file */
-      // if ( loadExclusions( optarg ) != TRUE )
-      //  return( EXIT_FAILURE );
-      // break;
-      fprintf(stderr, "ERR - Feature not currently supported\n");
-      print_help();
-      return (EXIT_SUCCESS);
+      if (loadExclusions(optarg) != TRUE)
+        return (EXIT_FAILURE);
+      break;
 
     case 'h':
       /* show help info */
@@ -220,7 +246,8 @@ int main(int argc, char *argv[]) {
 
     case 'w':
       /* define the dir to store logs in */
-      if ((config->outfile = (char *)XMALLOC(MAXPATHLEN + 1)) EQ NULL) {
+      if ((config->outfile = (char *)XMALLOC(MAXPATHLEN + 1)) EQ NULL)
+      {
         /* XXX problem */
       }
       XMEMSET(config->outfile, 0, MAXPATHLEN + 1);
@@ -238,7 +265,8 @@ int main(int argc, char *argv[]) {
 
   /* check dirs and files for danger */
 
-  if (time(&config->current_time) EQ - 1) {
+  if (time(&config->current_time) EQ - 1)
+  {
     fprintf(stderr, "ERR - Unable to get current time\n");
 
     /* cleanup buffers */
@@ -250,7 +278,8 @@ int main(int argc, char *argv[]) {
   config->hostname = (char *)XMALLOC(MAXHOSTNAMELEN + 1);
 
   /* get processor hostname */
-  if (gethostname(config->hostname, MAXHOSTNAMELEN) != 0) {
+  if (gethostname(config->hostname, MAXHOSTNAMELEN) != 0)
+  {
     fprintf(stderr, "Unable to get hostname\n");
     strncpy(config->hostname, "unknown", MAXHOSTNAMELEN);
   }
@@ -273,12 +302,14 @@ int main(int argc, char *argv[]) {
    ****/
 
   show_info();
-  if ((baseDir = (char *)XMALLOC(PATH_MAX)) EQ NULL) {
+  if ((baseDir = (char *)XMALLOC(PATH_MAX)) EQ NULL)
+  {
     fprintf(stderr, "ERR - Unable to allocate memory for baseDir string\n");
     cleanup();
     return (EXIT_FAILURE);
   }
-  if ((compDir = (char *)XMALLOC(PATH_MAX)) EQ NULL) {
+  if ((compDir = (char *)XMALLOC(PATH_MAX)) EQ NULL)
+  {
     fprintf(stderr, "ERR - Unable to allocate memory for compDir string\n");
     cleanup();
     return (EXIT_FAILURE);
@@ -286,18 +317,23 @@ int main(int argc, char *argv[]) {
 
   compDirHash = initHash(52);
 
-  while (optind < argc) {
-    if ((compDirLen = strlen(argv[optind])) >= PATH_MAX) {
+  while (optind < argc)
+  {
+    if ((compDirLen = strlen(argv[optind])) >= PATH_MAX)
+    {
       fprintf(stderr, "ERR - Argument too long\n");
       if (baseDirHash != NULL)
         freeHash(baseDirHash);
       freeHash(compDirHash);
       cleanup();
       return (EXIT_FAILURE);
-    } else {
+    }
+    else
+    {
       strncpy(compDir, argv[optind++], PATH_MAX - 1);
       /* process directory tree */
-      if (processDir(compDir) EQ FAILED) {
+      if (processDir(compDir) EQ FAILED)
+      {
         if (baseDirHash != NULL)
           freeHash(baseDirHash);
         freeHash(compDirHash);
@@ -305,9 +341,11 @@ int main(int argc, char *argv[]) {
         return (EXIT_FAILURE);
       }
 
-      if (baseDirHash != NULL) {
+      if (baseDirHash != NULL)
+      {
         /* compare the old tree to the new tree to find missing files */
-        if (traverseHash(baseDirHash, findMissingFiles) != TRUE) {
+        if (traverseHash(baseDirHash, findMissingFiles) != TRUE)
+        {
           freeHash(baseDirHash);
           freeHash(compDirHash);
           cleanup();
@@ -347,7 +385,8 @@ int main(int argc, char *argv[]) {
  *
  ****/
 
-void show_info(void) {
+void show_info(void)
+{
   fprintf(stderr, "%s v%s [%s - %s]\n", PROGNAME, VERSION, __DATE__, __TIME__);
   fprintf(stderr, "By: Ron Dilley\n");
   fprintf(stderr, "\n");
@@ -364,7 +403,8 @@ void show_info(void) {
  *
  *****/
 
-PRIVATE void print_version(void) {
+PRIVATE void print_version(void)
+{
   printf("%s v%s [%s - %s]\n", PROGNAME, VERSION, __DATE__, __TIME__);
 }
 
@@ -374,48 +414,37 @@ PRIVATE void print_version(void) {
  *
  *****/
 
-PRIVATE void print_help(void) {
+PRIVATE void print_help(void)
+{
   print_version();
 
   fprintf(stderr, "\n");
   fprintf(stderr, "syntax: %s [options] {dir}|{file} [{dir} ...]\n", PACKAGE);
 
 #ifdef HAVE_GETOPT_LONG
-  fprintf(stderr, " -a|--atime           show last access time changes "
-                  "(enables -p|--preserve)\n");
-  fprintf(stderr, " -c|--count           count file lines and bytes (disables "
-                  "hash modes)\n");
+  fprintf(stderr, " -a|--atime           show last access time changes (enables -p|--preserve)\n");
+  fprintf(stderr, " -c|--count           count file lines and bytes (disables hash modes)\n");
   fprintf(stderr, " -d|--debug (0-9)     enable debugging info\n");
   fprintf(stderr, " -e|--exdir {dir}     exclude {dir}\n");
-  fprintf(stderr,
-          " -E|--exfile {file}   exclude directories listed in {file}\n");
+  fprintf(stderr, " -E|--exfile {file}   exclude directories listed in {file}\n");
   fprintf(stderr, " -h|--help            this info\n");
-  fprintf(stderr, " -m|--md5             MD5 hash files and compare (disables "
-                  "-q|--quick and -s|--sha256 modes)\n");
-  fprintf(stderr, " -p|--preserve        preserve ATIME when hashing files "
-                  "(must have appropriate priviledges)\n");
+  fprintf(stderr, " -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)\n");
+  fprintf(stderr, " -p|--preserve        preserve ATIME when hashing files (must have appropriate priviledges)\n");
   fprintf(stderr, " -q|--quick           do quick comparisons only\n");
-  fprintf(stderr, " -s|--sha256          SHA256 hash files and compare "
-                  "(disables -q|--quick and -m|--md5 modes)\n");
+  fprintf(stderr, " -s|--sha256          SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)\n");
   fprintf(stderr, " -v|--version         display version information\n");
   fprintf(stderr, " -w|--write {file}    write directory tree to file\n");
 #else
   fprintf(stderr, " -a         show last access time changes (enables -p)\n");
-  fprintf(stderr,
-          " -c         count file lines and bytes (disables hash modes)\n");
+  fprintf(stderr, " -c         count file lines and bytes (disables hash modes)\n");
   fprintf(stderr, " -d {lvl}   enable debugging info\n");
   fprintf(stderr, " -e {dir}   exclude {dir}\n");
   fprintf(stderr, " -E {file}  exclude directories listed in {file}\n");
   fprintf(stderr, " -h         this info\n");
-  fprintf(
-      stderr,
-      " -m         MD5 hash files and compare (disables -q and -s modes)\n");
-  fprintf(stderr, " -p         preserve ATIME when hashing files (must have "
-                  "appropriate priviledges)\n");
+  fprintf(stderr, " -m         MD5 hash files and compare (disables -q and -s modes)\n");
+  fprintf(stderr, " -p         preserve ATIME when hashing files (must have appropriate priviledges)\n");
   fprintf(stderr, " -q         do quick comparisons only\n");
-  fprintf(
-      stderr,
-      " -s         SHA256 hash files and compare (disables -q and -m modes)\n");
+  fprintf(stderr, " -s         SHA256 hash files and compare (disables -q and -m modes)\n");
   fprintf(stderr, " -v         display version information\n");
   fprintf(stderr, " -w {file}  write directory tree to file\n");
 #endif
@@ -429,17 +458,31 @@ PRIVATE void print_help(void) {
  *
  ****/
 
-PRIVATE void cleanup(void) {
+PRIVATE void cleanup(void)
+{
+  int i;
+
+  /* variables from main */
+  if (config->exclusions != NULL)
+  {
+    for (i = 0; config->exclusions[i] != NULL; i++)
+      XFREE(config->exclusions[i]);
+    XFREE(config->exclusions);
+  }
   if (baseDir != NULL)
     XFREE(baseDir);
   if (compDir != NULL)
     XFREE(compDir);
-  XFREE(config->hostname);
+  if (config->hostname != NULL)
+    XFREE(config->hostname);
   if (config->home_dir != NULL)
     XFREE(config->home_dir);
   if (config->outfile != NULL)
     XFREE(config->outfile);
-  XFREE(config);
+
+  /* config */
+  if (config != NULL)
+    XFREE(config);
 #ifdef MEM_DEBUG
   XFREE_ALL();
 #endif
@@ -451,7 +494,8 @@ PRIVATE void cleanup(void) {
  *
  ****/
 
-void sigint_handler(int signo) {
+void sigint_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   /* do a calm shutdown as time and pcap_loop permit */
@@ -465,7 +509,8 @@ void sigint_handler(int signo) {
  *
  ****/
 
-void sigterm_handler(int signo) {
+void sigterm_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   /* do a calm shutdown as time and pcap_loop permit */
@@ -480,7 +525,8 @@ void sigterm_handler(int signo) {
  ****/
 
 #ifndef MINGW
-void sighup_handler(int signo) {
+void sighup_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   /* time to rotate logs and check the config */
@@ -495,7 +541,8 @@ void sighup_handler(int signo) {
  *
  ****/
 
-void sigsegv_handler(int signo) {
+void sigsegv_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   fprintf(stderr, "ERR - Caught a sig%d, shutting down fast\n", signo);
@@ -514,7 +561,8 @@ void sigsegv_handler(int signo) {
  *
  ****/
 
-void sigbus_handler(int signo) {
+void sigbus_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   fprintf(stderr, "ERR - Caught a sig%d, shutting down fast\n", signo);
@@ -533,7 +581,8 @@ void sigbus_handler(int signo) {
  *
  ****/
 
-void sigill_handler(int signo) {
+void sigill_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   fprintf(stderr, "ERR - Caught a sig%d, shutting down fast\n", signo);
@@ -552,7 +601,8 @@ void sigill_handler(int signo) {
  *
  ****/
 
-void sigfpe_handler(int signo) {
+void sigfpe_handler(int signo)
+{
   signal(signo, SIG_IGN);
 
   fprintf(stderr, "ERR - Caught a sig%d, shutting down fast\n", signo);

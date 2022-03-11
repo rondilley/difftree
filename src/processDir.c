@@ -2,7 +2,7 @@
  *
  * Description: Directory Processing Functions
  *
- * Copyright (c) 2009-2018, Ron Dilley
+ * Copyright (c) 2009-2022, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,6 +27,11 @@
  ****/
 
 #include "processDir.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <utime.h>
 
 /****
  *
@@ -74,13 +79,45 @@ extern Config_t *config;
 #define FTW_RECORD 0
 #define FILE_RECORD 1
 
-static int processFtwRecord(const char *fpath, const struct stat *sb, int tflag,
-                            struct FTW *ftwbuf) {
+static int processFtwRecord(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf)
+{
 #ifdef DEBUG
   if (config->debug > 6)
     if (ftwbuf != NULL)
       printf("DEBUG - ftw: base=%d level=%d\n", ftwbuf->base, ftwbuf->level);
 #endif
+
+  /* make sure nftw() returned something we can use */
+  switch (tflag)
+  {
+  case FTW_NS:
+    printf("INFO - nftw() could not stat [%s]\n", fpath);
+    return (FTW_CONTINUE);
+  case FTW_DNR:
+    printf("INFO - nftw() could not read directory [%s]\n", fpath);
+    return (FTW_CONTINUE);
+  case FTW_SLN:
+    printf("INFO - ntfw() symbolic link points to non-existent file [%s]\n", fpath);
+    return (FTW_CONTINUE);
+  }
+
+#ifdef DEBUG
+  if (config->debug >= 5)
+  {
+    if (tflag EQ FTW_DP)
+      printf("DEBUG - FTW_DP\n");
+    else if (tflag EQ FTW_SL)
+      printf("DEBUG - FTW_SL\n");
+    else if (tflag EQ FTW_F)
+      printf("DEBUG - FTW_F\n");
+    else if (tflag EQ FTW_D)
+      printf("DEBUG - FTW_D\n");
+    else
+      printf("DEBUG - Unknown ftw() typeFlag [%d]\n", tflag);
+  }
+#endif
+
+  /* process the file */
   return processRecord(fpath, sb, FTW_RECORD, NULL);
 }
 
@@ -90,8 +127,8 @@ static int processFtwRecord(const char *fpath, const struct stat *sb, int tflag,
  *
  ****/
 
-int processRecord(const char *fpath, const struct stat *sb, char mode,
-                  unsigned char *digestPtr) {
+int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned char *digestPtr)
+{
   struct hashRec_s *tmpRec;
   struct stat *tmpSb;
   metaData_t *tmpMD;
@@ -106,30 +143,47 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
   size_t rCount, lCount, tCount;
   unsigned char rBuf[16384];
   unsigned char digest[32];
-  int i, tflag = sb->st_mode & S_IFMT;
+  int i, tflag = 0;
   struct utimbuf tmp_utimbuf;
 
+  if (sb EQ NULL)
+  {
+    fprintf(stderr, "ERR - stats argument is NULL from ftk\n");
+    return (FTW_CONTINUE);
+  }
+
+  /* extract flags */
+  tflag = sb->st_mode & S_IFMT;
+
   /* check the directory exclusion list */
-  if (config->exclusions != NULL) {
+  if (config->exclusions != NULL)
+  {
 #ifndef FTW_SKIP_SUBTREE
-    for (i = 0; config->exclusions[i] != NULL; i++) {
+    for (i = 0; config->exclusions[i] != NULL; i++)
+    {
 #ifdef DEBUG
       if (config->debug >= 5)
         printf("DEBUG - Exclusion [%s] Dir [%s]\n", config->exclusions[i],
                fpath);
 #endif
-      if ((foundPtr = strstr(fpath, config->exclusions[i])) != NULL) {
-        if (tflag EQ S_IFDIR) {
+      if ((foundPtr = strstr(fpath, config->exclusions[i])) EQ fpath)
+      {
+        if (tflag EQ S_IFDIR)
+        {
           if ((foundPtr[strlen(config->exclusions[i])] EQ '/') ||
-              (foundPtr[strlen(config->exclusions[i])] EQ 0)) {
+              (foundPtr[strlen(config->exclusions[i])] EQ 0))
+          {
 #ifdef DEBUG
             if (config->debug >= 1)
               printf("DEBUG - Excluding directory [%s]\n", fpath);
 #endif
             return (FTW_CONTINUE);
           }
-        } else {
-          if (foundPtr[strlen(config->exclusions[i])] EQ '/') {
+        }
+        else
+        {
+          if (foundPtr[strlen(config->exclusions[i])] EQ '/')
+          {
 #ifdef DEBUG
             if (config->debug >= 1)
               printf("DEBUG - Excluding child [%s]\n", fpath);
@@ -140,18 +194,22 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
       }
     }
 #else
-    if (tflag EQ S_IFDIR) {
-      for (i = 0; config->exclusions[i] != NULL; i++) {
+    if (tflag EQ S_IFDIR)
+    {
+      for (i = 0; config->exclusions[i] != NULL; i++)
+      {
 #ifdef DEBUG
         if (config->debug >= 5)
-          printf("DEBUG - Exclusion [%s] Dir [%s]\n", config->exclusions[i],
-                 fpath);
+          printf("DEBUG - Exclusion test [%s] Dir [%s]\n", config->exclusions[i], fpath);
 #endif
-        if ((foundPtr = strstr(fpath, config->exclusions[i])) != NULL) {
-          if (foundPtr[strlen(config->exclusions[i])] EQ 0) {
+        if ((foundPtr = strstr(fpath, config->exclusions[i])) EQ fpath)
+        {
+          if ((foundPtr[strlen(config->exclusions[i])] EQ '/') ||
+              (foundPtr[strlen(config->exclusions[i])] EQ '\0'))
+          {
 #ifdef DEBUG
             if (config->debug >= 1)
-              printf("DEBUG - Excluding [%s]\n", fpath);
+              printf("DEBUG - Excluding directory [%s]\n", fpath);
 #endif
             return (FTW_SKIP_SUBTREE);
           }
@@ -169,98 +227,76 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
   XMEMSET(tmpBuf, 0, sizeof(tmpBuf));
   XMEMSET(diffBuf, 0, sizeof(diffBuf));
 
-  if (strlen(fpath) <= compDirLen) {
+  if (strlen(fpath) <= compDirLen)
+  {
     /* ignore the root */
     return (FTW_CONTINUE);
   }
 
-  if (quit) {
+  if (quit)
+  {
     /* graceful shutdown */
     return (FTW_STOP);
   }
 
 #ifdef DEBUG
-  if (config->debug >= 1)
+  if (config->debug >= 6)
     printf("DEBUG - Processing File [%s]\n", fpath + compDirLen);
 #endif
 
-  if (baseDirHash != NULL) {
+  if (baseDirHash != NULL)
+  {
 
     /*
      * now we need to compare
      */
 
 #ifdef DEBUG
-    if (config->debug >= 2)
+    if (config->debug >= 3)
       printf("DEBUG - Compairing [%s]\n", fpath + compDirLen);
 #endif
 
-    if (tflag EQ S_IFREG) {
-      if (config->count) { /* count regular files */
-        if (mode EQ FTW_RECORD) {
+    if (tflag EQ S_IFREG)
+    {
+      if (config->count)
+      { /* count regular files */
+        if (mode EQ FTW_RECORD)
+        {
           if ((((foundPtr = strrchr(fpath + compDirLen, '.')) != NULL)) &&
-              (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+              (strncmp(foundPtr, ".gz", 3) EQ 0))
+          {
             /* gzip compressed */
-            if ((gzInFile = gzopen(fpath, "rb"))EQ NULL) {
+            if ((gzInFile = gzopen(fpath, "rb")) EQ NULL)
+            {
               fprintf(stderr, "ERR - Unable to open file [%s]\n",
                       fpath + compDirLen);
-            } else {
+            }
+            else
+            {
               lCount = tCount = 0;
-              while ((rCount = gzread(gzInFile, rBuf, sizeof(rBuf))) > 0) {
+              while ((rCount = gzread(gzInFile, rBuf, sizeof(rBuf))) > 0)
+              {
 #ifdef DEBUG
                 if (config->debug >= 6)
                   printf("DEBUG - Read [%ld] bytes from [%s]\n",
                          (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++) {
+                for (i = 0; i < rCount; i++)
+                {
                   if (rBuf[i] EQ '\n')
                     lCount++;
                 }
               }
               gzclose(gzInFile);
 #ifdef DEBUG
-			  if ( config->debug >= 3 )
-				  printf("Size: %ld Lines: %ld\n", tCount, lCount);
+              if (config->debug >= 3)
+                printf("Size: %ld Lines: %ld\n", tCount, lCount);
 #endif
-			  
-			  
-              /* preserve atime */
-              if (config->preserve_atime) {
-                tmp_utimbuf.actime = sb->st_atime;
-                tmp_utimbuf.modtime = sb->st_mtime;
-                if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
-                          fpath, errno, strerror(errno));
-              }
-            }
-          } else {
-            if ((inFile = fopen(fpath, "r"))EQ NULL) {
-              fprintf(stderr, "ERR - Unable to open file [%s]\n",
-                      fpath + compDirLen);
-            } else {
-              lCount = tCount = 0;
-              while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
-#ifdef DEBUG
-                if (config->debug >= 6)
-                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
-                         (long int)rCount, fpath + compDirLen);
-#endif
-                tCount += rCount;
-                for (i = 0; i < rCount; i++) {
-                  if (rBuf[i] EQ '\n')
-                    lCount++;
-                }
-              }
-              fclose(inFile);
 
-#ifdef DEBUG
-			  if (config->debug >= 3)
-				  printf("Size: %ld Lines: %ld\n", tCount, lCount);
-#endif
-			  
               /* preserve atime */
-              if (config->preserve_atime) {
+              if (config->preserve_atime)
+              {
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
@@ -269,10 +305,57 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
               }
             }
           }
-        } else if (mode EQ FILE_RECORD) {
+          else
+          {
+            if ((inFile = fopen(fpath, "r")) EQ NULL)
+            {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n",
+                      fpath + compDirLen);
+            }
+            else
+            {
+              lCount = tCount = 0;
+              while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0)
+              {
+#ifdef DEBUG
+                if (config->debug >= 6)
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
+                         (long int)rCount, fpath + compDirLen);
+#endif
+                tCount += rCount;
+                for (i = 0; i < rCount; i++)
+                {
+                  if (rBuf[i] EQ '\n')
+                    lCount++;
+                }
+              }
+              fclose(inFile);
+
+#ifdef DEBUG
+              if (config->debug >= 3)
+                printf("Size: %ld Lines: %ld\n", tCount, lCount);
+#endif
+
+              /* preserve atime */
+              if (config->preserve_atime)
+              {
+                tmp_utimbuf.actime = sb->st_atime;
+                tmp_utimbuf.modtime = sb->st_mtime;
+                if (utime(fpath, &tmp_utimbuf) != 0)
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                          fpath, errno, strerror(errno));
+              }
+            }
+          }
         }
-      } else if (config->hash) { /* hash regular files */
-        if (mode EQ FTW_RECORD) {
+        else if (mode EQ FILE_RECORD)
+        {
+        }
+      }
+      else if (config->hash)
+      { /* hash regular files */
+        if (mode EQ FTW_RECORD)
+        {
 #ifdef DEBUG
           if (config->debug >= 3)
             printf("DEBUG - Generating hash of file [%s]\n",
@@ -283,11 +366,15 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
           else
             MD5_Init(&md5_ctx);
 
-          if ((inFile = fopen(fpath, "r"))EQ NULL) {
+          if ((inFile = fopen(fpath, "r")) EQ NULL)
+          {
             fprintf(stderr, "ERR - Unable to open file [%s]\n",
                     fpath + compDirLen);
-          } else {
-            while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
+          }
+          else
+          {
+            while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0)
+            {
 #ifdef DEBUG
               if (config->debug >= 6)
                 printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount,
@@ -301,7 +388,8 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
             fclose(inFile);
 
             /* preserve atime */
-            if (config->preserve_atime) {
+            if (config->preserve_atime)
+            {
               tmp_utimbuf.actime = sb->st_atime;
               tmp_utimbuf.modtime = sb->st_mtime;
               if (utime(fpath, &tmp_utimbuf) != 0)
@@ -315,8 +403,11 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
             else
               MD5_Final(digest, &md5_ctx);
           }
-        } else if (mode EQ FILE_RECORD) {
-          if (digestPtr != NULL) {
+        }
+        else if (mode EQ FILE_RECORD)
+        {
+          if (digestPtr != NULL)
+          {
 #ifdef DEBUG
             if (config->debug >= 3)
               printf("DEBUG - Loading previously generated hash of file [%s]\n",
@@ -324,33 +415,39 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #endif
             XMEMCPY(digest, digestPtr, config->digest_size);
           }
-        } else {
+        }
+        else
+        {
           /* unknown record type */
         }
       }
     }
 
-    if ((tmpRec = getHashRecord(baseDirHash, fpath + compDirLen))EQ NULL) {
+    if ((tmpRec = getHashRecord(baseDirHash, fpath + compDirLen, strlen(fpath + compDirLen) + 1)) EQ NULL)
+    {
       printf("+ %s [%s]\n",
              (tflag == S_IFDIR)
                  ? "d"
-                 : (tflag == S_IFCHR)
-                       ? "chr"
-                       : (tflag == S_IFBLK)
-                             ? "blk"
-                             : (tflag == S_IFREG)
-                                   ? "f"
-                                   :
+             : (tflag == S_IFCHR)
+                 ? "chr"
+             : (tflag == S_IFBLK)
+                 ? "blk"
+             : (tflag == S_IFREG)
+                 ? "f"
+             :
 #ifndef MINGW
-                                   (tflag == S_IFSOCK)
-                                       ? "sok"
-                                       : (tflag == S_IFLNK) ? "sl" :
+             (tflag == S_IFSOCK)
+                 ? "sok"
+             : (tflag == S_IFLNK) ? "sl"
+             :
 #endif
-                                                            (tflag == S_IFIFO)
-                                                                ? "fifo"
-                                                                : "???",
+             (tflag == S_IFIFO)
+                 ? "fifo"
+                 : "???",
              fpath + compDirLen);
-    } else {
+    }
+    else
+    {
 #ifdef DEBUG
       if (config->debug >= 3)
         printf("DEBUG - Found match, comparing metadata\n");
@@ -358,7 +455,8 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
       tmpMD = (metaData_t *)tmpRec->data;
       tmpSb = (struct stat *)&tmpMD->sb;
 
-      if (sb->st_size != tmpSb->st_size) {
+      if (sb->st_size != tmpSb->st_size)
+      {
 #ifdef HAVE_SNPRINTF
         snprintf(tmpBuf, sizeof(tmpBuf), "s[%ld->%ld] ",
                  (long int)tmpSb->st_size, (long int)sb->st_size);
@@ -372,11 +470,16 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #else
         strlcat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
 #endif
-      } else {
-        if (config->hash && (tflag EQ S_IFREG)) {
-          if (memcmp(tmpMD->digest, digest, config->digest_size) != 0) {
+      }
+      else
+      {
+        if (config->hash && (tflag EQ S_IFREG))
+        {
+          if (memcmp(tmpMD->digest, digest, config->digest_size) != 0)
+          {
             /* hash does not match */
-            if (config->sha256_hash) {
+            if (config->sha256_hash)
+            {
 #ifdef HAVE_SNPRINTF
               snprintf(
                   tmpBuf, sizeof(tmpBuf), "sha256[%s->",
@@ -385,7 +488,9 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
               sprintf(tmpBuf, "sha256[%s->",
                       hash2hex(tmpMD->digest, rBuf, config->digest_size));
 #endif
-            } else {
+            }
+            else
+            {
 #ifdef HAVE_SNPRINTF
               snprintf(
                   tmpBuf, sizeof(tmpBuf), "md5[%s->",
@@ -416,11 +521,13 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
         }
       }
 
-      if (!config->quick) {
+      if (!config->quick)
+      {
         /* do more testing */
 
         /* uid/gid */
-        if (sb->st_uid != tmpSb->st_uid) {
+        if (sb->st_uid != tmpSb->st_uid)
+        {
 #ifdef HAVE_SNPRINTF
           snprintf(tmpBuf, sizeof(tmpBuf), "u[%d>%d] ", tmpSb->st_uid,
                    sb->st_uid);
@@ -433,7 +540,8 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
           strlcat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
 #endif
         }
-        if (sb->st_gid != tmpSb->st_gid) {
+        if (sb->st_gid != tmpSb->st_gid)
+        {
 #ifdef HAVE_SNPRINTF
           snprintf(tmpBuf, sizeof(tmpBuf), "g[%d>%d] ", tmpSb->st_gid,
                    sb->st_gid);
@@ -449,53 +557,51 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
         }
 
         /* file type */
-        if ((sb->st_mode & S_IFMT) != (tmpSb->st_mode & S_IFMT)) {
+        if ((sb->st_mode & S_IFMT) != (tmpSb->st_mode & S_IFMT))
+        {
 #ifdef HAVE_SNPRINTF
-          snprintf(
-              tmpBuf, sizeof(tmpBuf), "t[%s->%s] ",
+          snprintf(tmpBuf, sizeof(tmpBuf), "t[%s->%s] ",
 #else
           sprintf(tmpBuf, "t[%s->%s] ",
 #endif
-              ((tmpSb->st_mode & S_IFMT) == S_IFDIR)
-                  ? "d"
-                  : ((tmpSb->st_mode & S_IFMT) == S_IFBLK)
-                        ? "blk"
-                        : ((tmpSb->st_mode & S_IFMT) == S_IFREG)
-                              ? "f"
-                              : ((tmpSb->st_mode & S_IFMT) == S_IFCHR)
-                                    ? "chr"
-                                    :
+                   ((tmpSb->st_mode & S_IFMT) EQ S_IFDIR)
+                       ? "d"
+                   : ((tmpSb->st_mode & S_IFMT) EQ S_IFBLK)
+                       ? "blk"
+                   : ((tmpSb->st_mode & S_IFMT) EQ S_IFREG)
+                       ? "f"
+                   : ((tmpSb->st_mode & S_IFMT) EQ S_IFCHR)
+                       ? "chr"
+                   :
 #ifndef MINGW
-                                    ((tmpSb->st_mode & S_IFMT) == S_IFSOCK)
-                                        ? "sok"
-                                        : ((tmpSb->st_mode & S_IFMT) == S_IFLNK)
-                                              ? "sl"
-                                              :
+                   ((tmpSb->st_mode & S_IFMT) EQ S_IFSOCK)
+                       ? "sok"
+                   : ((tmpSb->st_mode & S_IFMT) EQ S_IFLNK)
+                       ? "sl"
+                   :
 #endif
-                                              ((tmpSb->st_mode & S_IFMT) ==
-                                               S_IFIFO)
-                                                  ? "fifo"
-                                                  : "???",
-              ((sb->st_mode & S_IFMT) == S_IFDIR)
-                  ? "d"
-                  : ((sb->st_mode & S_IFMT) == S_IFBLK)
-                        ? "blk"
-                        : ((sb->st_mode & S_IFMT) == S_IFREG)
-                              ? "f"
-                              : ((sb->st_mode & S_IFMT) == S_IFCHR)
-                                    ? "chr"
-                                    :
+                   ((tmpSb->st_mode & S_IFMT) EQ S_IFIFO)
+                       ? "fifo"
+                       : "???",
+                   ((sb->st_mode & S_IFMT) EQ S_IFDIR)
+                       ? "d"
+                   : ((sb->st_mode & S_IFMT) EQ S_IFBLK)
+                       ? "blk"
+                   : ((sb->st_mode & S_IFMT) EQ S_IFREG)
+                       ? "f"
+                   : ((sb->st_mode & S_IFMT) EQ S_IFCHR)
+                       ? "chr"
+                   :
 #ifndef MINGW
-                                    ((sb->st_mode & S_IFMT) == S_IFSOCK)
-                                        ? "sok"
-                                        : ((sb->st_mode & S_IFMT) == S_IFLNK)
-                                              ? "sl"
-                                              :
+                   ((sb->st_mode & S_IFMT) EQ S_IFSOCK)
+                       ? "sok"
+                   : ((sb->st_mode & S_IFMT) EQ S_IFLNK)
+                       ? "sl"
+                   :
 #endif
-                                              ((sb->st_mode & S_IFMT) ==
-                                               S_IFIFO)
-                                                  ? "fifo"
-                                                  : "???");
+                   ((sb->st_mode & S_IFMT) EQ S_IFIFO)
+                       ? "fifo"
+                       : "???");
 
 #ifdef HAVE_STRNCAT
           strncat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
@@ -505,10 +611,10 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
         }
 
         /* permissions */
-        if ((sb->st_mode & 0xffff) != (tmpSb->st_mode & 0xffff)) {
+        if ((sb->st_mode & 0xffff) != (tmpSb->st_mode & 0xffff))
+        {
 #ifdef HAVE_SNPRINTF
-          snprintf(tmpBuf, sizeof(tmpBuf),
-                   "p[%c%c%c%c%c%c%c%c%c->%c%c%c%c%c%c%c%c%c] ",
+          snprintf(tmpBuf, sizeof(tmpBuf), "p[%c%c%c%c%c%c%c%c%c->%c%c%c%c%c%c%c%c%c] ",
 #else
           sprintf(tmpBuf, "p[%c%c%c%c%c%c%c%c%c->%c%c%c%c%c%c%c%c%c] ",
 #endif
@@ -520,19 +626,16 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #else
                   (tmpSb->st_mode & S_IRUSR) ? 'r' : '-',
                   (tmpSb->st_mode & S_IWUSR) ? 'w' : '-',
-                  (tmpSb->st_mode & S_ISUID) ? 's' : (tmpSb->st_mode & S_IXUSR)
-                                                         ? 'x'
-                                                         : '-',
+                  (tmpSb->st_mode & S_ISUID) ? 's' : (tmpSb->st_mode & S_IXUSR) ? 'x'
+                                                                                : '-',
                   (tmpSb->st_mode & S_IRGRP) ? 'r' : '-',
                   (tmpSb->st_mode & S_IWGRP) ? 'w' : '-',
-                  (tmpSb->st_mode & S_ISGID) ? 's' : (tmpSb->st_mode & S_IXGRP)
-                                                         ? 'x'
-                                                         : '-',
+                  (tmpSb->st_mode & S_ISGID) ? 's' : (tmpSb->st_mode & S_IXGRP) ? 'x'
+                                                                                : '-',
                   (tmpSb->st_mode & S_IROTH) ? 'r' : '-',
                   (tmpSb->st_mode & S_IWOTH) ? 'w' : '-',
-                  (tmpSb->st_mode & S_ISVTX) ? 's' : (tmpSb->st_mode & S_IXOTH)
-                                                         ? 'x'
-                                                         : '-',
+                  (tmpSb->st_mode & S_ISVTX) ? 's' : (tmpSb->st_mode & S_IXOTH) ? 'x'
+                                                                                : '-',
 #endif
 #ifdef MINGW
                    (sb->st_mode & S_IREAD) ? 'r' : '-',
@@ -553,7 +656,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
                   (sb->st_mode & S_ISVTX) ? 's' : (sb->st_mode & S_IXOTH) ? 'x'
                                                                           : '-'
 #endif
-                   );
+          );
 #ifdef HAVE_STRNCAT
           strncat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
 #else
@@ -562,7 +665,8 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
         }
 
         /* report if MTIME does not match */
-        if (sb->st_mtime != tmpSb->st_mtime) {
+        if (sb->st_mtime != tmpSb->st_mtime)
+        {
           tmPtr = localtime(&tmpSb->st_mtime);
 #ifdef HAVE_SNPRINTF
           snprintf(tmpBuf, sizeof(tmpBuf), "mt[%04d/%02d/%02d@%02d:%02d:%02d->",
@@ -591,9 +695,11 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
 #endif
         }
 
-        if (config->show_atime) {
+        if (config->show_atime)
+        {
           /* report if ATIME does not match */
-          if (sb->st_atime != tmpSb->st_atime) {
+          if (sb->st_atime != tmpSb->st_atime)
+          {
             tmPtr = localtime(&tmpSb->st_atime);
 #ifdef HAVE_SNPRINTF
             snprintf(tmpBuf, sizeof(tmpBuf),
@@ -625,29 +731,32 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
         }
       }
 
-      if (strlen(diffBuf)) {
+      if (strlen(diffBuf))
+      {
         printf("%s%s [%s]\n", diffBuf,
                (tflag == S_IFDIR)
                    ? "d"
-                   : (tflag == S_IFBLK)
-                         ? "blk"
-                         : (tflag == S_IFREG)
-                               ? "f"
-                               : (tflag == S_IFCHR)
-                                     ? "chr"
-                                     :
+               : (tflag == S_IFBLK)
+                   ? "blk"
+               : (tflag == S_IFREG)
+                   ? "f"
+               : (tflag == S_IFCHR)
+                   ? "chr"
+               :
 #ifndef MINGW
-                                     (tflag == S_IFSOCK)
-                                         ? "sok"
-                                         : (tflag == S_IFLNK) ? "sl" :
+               (tflag == S_IFSOCK)
+                   ? "sok"
+               : (tflag == S_IFLNK) ? "sl"
+               :
 #endif
-                                                              (tflag == S_IFIFO)
-                                                                  ? "fifo"
-                                                                  : "???",
+               (tflag == S_IFIFO)
+                   ? "fifo"
+                   : "???",
                fpath);
       }
 #ifdef DEBUG
-      else {
+      else
+      {
         if (config->debug > 4)
           printf("DEBUG - Record matches\n");
       }
@@ -658,7 +767,8 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
     tmpMD = (metaData_t *)XMALLOC(sizeof(metaData_t));
     XMEMSET(tmpMD, 0, sizeof(metaData_t));
     /* save the hash for regular files */
-    if (config->hash && (tflag EQ S_IFREG)) {
+    if (config->hash && (tflag EQ S_IFREG))
+    {
 #ifdef DEBUG
       if (config->debug >= 3)
         printf("DEBUG - Adding hash [%s] for file [%s]\n",
@@ -668,128 +778,147 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
       XMEMCPY(tmpMD->digest, digest, sizeof(digest));
     }
     XMEMCPY((void *)&tmpMD->sb, (void *)sb, sizeof(struct stat));
-    addUniqueHashRec(compDirHash, fpath + compDirLen,
-                     strlen(fpath + compDirLen) + 1, tmpMD);
+    addUniqueHashRec(compDirHash, fpath + compDirLen, strlen(fpath + compDirLen) + 1, tmpMD);
     /* check to see if the hash should be grown */
     compDirHash = dyGrowHash(compDirHash);
-  } else {
+  }
+  else
+  {
 
     /*
      * first time through a directory
      */
 
 #ifdef DEBUG
-    if (config->debug >= 2)
+    if (config->debug >= 4)
       printf("DEBUG - Scanning [%s]\n", fpath + compDirLen);
 #endif
 
     tmpMD = (metaData_t *)XMALLOC(sizeof(metaData_t));
     XMEMSET(tmpMD, 0, sizeof(metaData_t));
 
-    if (tflag EQ S_IFREG) {
-      if (config->count) { /* count regular files */
-        if (mode EQ FTW_RECORD) {
-          if ((((foundPtr = strrchr(fpath + compDirLen, '.')) != NULL)) &&
-              (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+    if (tflag EQ S_IFREG)
+    {
+      if (config->count)
+      { /* count regular files */
+        if (mode EQ FTW_RECORD)
+        {
+          if ((((foundPtr = strrchr(fpath + compDirLen, '.')) != NULL)) && (strncmp(foundPtr, ".gz", 3) EQ 0))
+          {
             /* gzip compressed */
 
-            if ((gzInFile = gzopen(fpath, "rb"))EQ NULL) {
-              fprintf(stderr, "ERR - Unable to open file [%s]\n",
-                      fpath + compDirLen);
-            } else {
+            if ((gzInFile = gzopen(fpath, "rb")) EQ NULL)
+            {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n", fpath + compDirLen);
+            }
+            else
+            {
               lCount = tCount = 0;
-              while ((rCount = gzread(gzInFile, rBuf, sizeof(rBuf))) > 0) {
+              while ((rCount = gzread(gzInFile, rBuf, sizeof(rBuf))) > 0)
+              {
 #ifdef DEBUG
                 if (config->debug >= 6)
-                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
-                         (long int)rCount, fpath + compDirLen);
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++) {
+                for (i = 0; i < rCount; i++)
+                {
                   if (rBuf[i] EQ '\n')
                     lCount++;
                 }
               }
               gzclose(gzInFile);
 
-			  tmpMD->byteCount = tCount;
-			  tmpMD->lineCount = lCount;
-			  
+              tmpMD->byteCount = tCount;
+              tmpMD->lineCount = lCount;
+
 #ifdef DEBUG
-			  if (config->debug >= 3)
-				  printf("Size: %ld Lines: %ld\n", tCount, lCount);
+              if (config->debug >= 3)
+                printf("Size: %ld Lines: %ld\n", tCount, lCount);
 #endif
-			  
+
               /* preserve atime */
-              if (config->preserve_atime) {
+              if (config->preserve_atime)
+              {
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
-                          fpath, errno, strerror(errno));
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
               }
             }
-          } else {
-            if ((inFile = fopen(fpath, "r"))EQ NULL) {
-              fprintf(stderr, "ERR - Unable to open file [%s]\n",
-                      fpath + compDirLen);
-            } else {
+          }
+          else
+          {
+            if ((inFile = fopen(fpath, "r")) EQ NULL)
+            {
+              fprintf(stderr, "ERR - Unable to open file [%s]\n", fpath + compDirLen);
+            }
+            else
+            {
               lCount = tCount = 0;
-              while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
+              while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0)
+              {
 #ifdef DEBUG
                 if (config->debug >= 6)
-                  printf("DEBUG - Read [%ld] bytes from [%s]\n",
-                         (long int)rCount, fpath + compDirLen);
+                  printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++) {
+                for (i = 0; i < rCount; i++)
+                {
                   if (rBuf[i] EQ '\n')
                     lCount++;
                 }
               }
               fclose(inFile);
-			  
-			  tmpMD->byteCount = tCount;
-			  tmpMD->lineCount = lCount;
-			  
+
+              tmpMD->byteCount = tCount;
+              tmpMD->lineCount = lCount;
+
 #ifdef DEBUG
-			  if ( config->debug >= 3 )
-				  printf("Name: %s Size: %lu Lines: %lu\n", fpath, tCount, lCount);
+              if (config->debug >= 3)
+                printf("Name: %s Size: %lu Lines: %lu\n", fpath, tCount, lCount);
 #endif
-			  
+
               /* preserve atime */
-              if (config->preserve_atime) {
+              if (config->preserve_atime)
+              {
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
-                          fpath, errno, strerror(errno));
+                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
               }
             }
           }
-        } else if (mode EQ FILE_RECORD) {
         }
-      } else if (config->hash) { /* hash regular files */
-        if (mode EQ FTW_RECORD) {
+        else if (mode EQ FILE_RECORD)
+        {
+        }
+      }
+      else if (config->hash)
+      { /* hash regular files */
+        if (mode EQ FTW_RECORD)
+        {
 #ifdef DEBUG
           if (config->debug >= 3)
-            printf("DEBUG - Generating hash of file [%s]\n",
-                   fpath + compDirLen);
+            printf("DEBUG - Generating hash of file [%s]\n", fpath + compDirLen);
 #endif
           if (config->sha256_hash)
             sha256_starts(&sha256_ctx);
           else
             MD5_Init(&md5_ctx);
 
-          if ((inFile = fopen(fpath, "r"))EQ NULL) {
+          if ((inFile = fopen(fpath, "r")) EQ NULL)
+          {
             fprintf(stderr, "ERR - Unable to open file [%s]\n",
                     fpath + compDirLen);
-          } else {
-            while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0) {
+          }
+          else
+          {
+            while ((rCount = fread(rBuf, 1, sizeof(rBuf), inFile)) > 0)
+            {
 #ifdef DEBUG
               if (config->debug >= 6)
-                printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount,
-                       fpath + compDirLen);
+                printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath + compDirLen);
 #endif
               if (config->sha256_hash)
                 sha256_update(&sha256_ctx, rBuf, rCount);
@@ -799,12 +928,12 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
             fclose(inFile);
 
             /* preserve atime */
-            if (config->preserve_atime) {
+            if (config->preserve_atime)
+            {
               tmp_utimbuf.actime = sb->st_atime;
               tmp_utimbuf.modtime = sb->st_mtime;
               if (utime(fpath, &tmp_utimbuf) != 0)
-                sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
-                        errno, strerror(errno));
+                fprintf(stderr, "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
             }
 
             /* finalize hash */
@@ -813,12 +942,14 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
             else
               MD5_Final(digest, &md5_ctx);
           }
-        } else if (mode EQ FILE_RECORD) {
-          if (digestPtr != NULL) {
+        }
+        else if (mode EQ FILE_RECORD)
+        {
+          if (digestPtr != NULL)
+          {
 #ifdef DEBUG
             if (config->debug >= 3)
-              printf("DEBUG - Loading previously generated MD5 of file [%s]\n",
-                     fpath + compDirLen);
+              printf("DEBUG - Loading previously generated MD5 of file [%s]\n", fpath + compDirLen);
 #endif
             XMEMCPY(digest, digestPtr, sizeof(digest));
           }
@@ -832,8 +963,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
     if (config->debug >= 5)
       printf("DEBUG - Adding RECORD\n");
 #endif
-    addUniqueHashRec(compDirHash, fpath + compDirLen,
-                     strlen(fpath + compDirLen) + 1, tmpMD);
+    addUniqueHashRec(compDirHash, fpath + compDirLen, strlen(fpath + compDirLen) + 1, tmpMD);
     /* check to see if the hash should be grown */
     compDirHash = dyGrowHash(compDirHash);
   }
@@ -847,57 +977,70 @@ int processRecord(const char *fpath, const struct stat *sb, char mode,
  *
  ****/
 
-PUBLIC int processDir(char *startDirStr) {
+PUBLIC int processDir(char *startDirStr)
+{
   struct stat sb;
   char dirStr[PATH_MAX + 1];
   int tflag, ret, startDirStrLen;
 
-  if (lstat(startDirStr, &sb) EQ 0) {
+  if (lstat(startDirStr, &sb) EQ 0)
+  {
     /* file exists, make sure it is a file */
     tflag = sb.st_mode & S_IFMT;
-    if (tflag EQ S_IFREG) {
+    if ((tflag EQ S_IFREG) || (tflag EQ S_IFLNK))
+    {
       /* process file */
       compDirLen = 0;
       XSTRNCPY(dirStr, startDirStr, PATH_MAX);
       printf("Processing file [%s]\n", dirStr);
-      if ((ret = loadFile(dirStr))EQ(-1)) {
+      if ((ret = loadFile(dirStr)) EQ(-1))
+      {
         fprintf(stderr, "ERR - Problem while loading file\n");
         return (FAILED);
-      } else if (ret EQ FTW_STOP) {
+      }
+      else if (ret EQ FTW_STOP)
+      {
         fprintf(stderr, "ERR - loadFile() was interrupted by a signal\n");
         return (FAILED);
       }
-    } else if (tflag EQ S_IFDIR) {
+    }
+    else if (tflag EQ S_IFDIR)
+    {
       /* process directory */
 
       /* add trailing slash if it is missing */
       startDirStrLen = strlen(startDirStr);
-      if (startDirStr[startDirStrLen - 1] != '/') {
+      if (startDirStr[startDirStrLen - 1] != '/')
+      {
         snprintf(dirStr, PATH_MAX, "%s/", startDirStr);
         /* need to update the compDir variable used in main() */
         compDir[compDirLen++] = '/';
         compDir[compDirLen] = 0;
-      } else
+      }
+      else
         XSTRNCPY(dirStr, startDirStr, PATH_MAX);
 
       printf("Processing dir [%s]\n", dirStr);
 
 #ifdef HAVE_NFTW
-      if ((ret = nftw(dirStr, processFtwRecord, 20,
-                      FTW_PHYS | FTW_ACTIONRETVAL))EQ(-1)) {
+      if ((ret = nftw(dirStr, processFtwRecord, 20, FTW_PHYS | FTW_ACTIONRETVAL)) EQ FAILED)
+      {
 #else
-      if ((ret = noftw(dirStr, processFtwRecord, 20,
-                       FTW_PHYS | FTW_ACTIONRETVAL))EQ(-1)) {
+      if ((ret = noftw(dirStr, processFtwRecord, 20, FTW_PHYS | FTW_ACTIONRETVAL)) EQ FAILED)
+      {
 #endif
         fprintf(stderr, "ERR - Unable to open dir [%s]\n", dirStr);
         return (FAILED);
-      } else if (ret EQ FTW_STOP) {
+      }
+      else if (ret EQ FTW_STOP)
+      {
         fprintf(stderr, "ERR - nftw() was interrupted by a signal\n");
         return (FAILED);
       }
 
       /* write data to file */
-      if (config->outfile != NULL) {
+      if (config->outfile != NULL)
+      {
         writeDirHash2File(compDirHash, compDir, config->outfile);
         /* only write out the first read dir */
         XFREE(config->outfile);
@@ -908,12 +1051,16 @@ PUBLIC int processDir(char *startDirStr) {
       if (config->debug >= 2)
         printf("DEBUG - Finished processing dir [%s]\n", dirStr);
 #endif
-    } else {
+    }
+    else
+    {
       fprintf(stderr, "ERR - [%s] is not a regular file or a directory\n",
               startDirStr);
       return (FAILED);
     }
-  } else {
+  }
+  else
+  {
     fprintf(stderr, "ERR - Unable to stat file [%s]\n", startDirStr);
     return (FAILED);
   }
@@ -927,7 +1074,8 @@ PUBLIC int processDir(char *startDirStr) {
  *
  ****/
 
-int findMissingFiles(const struct hashRec_s *hashRec) {
+int findMissingFiles(const struct hashRec_s *hashRec)
+{
   struct hashRec_s *tmpRec;
   metaData_t *tmpMD;
   struct stat *tmpSb;
@@ -938,28 +1086,30 @@ int findMissingFiles(const struct hashRec_s *hashRec) {
     printf("DEBUG - Searching for [%s]\n", hashRec->keyString);
 #endif
 
-  if ((tmpRec = getHashRecord(compDirHash, hashRec->keyString))EQ NULL) {
+  if ((tmpRec = getHashRecord(compDirHash, hashRec->keyString, strlen(hashRec->keyString) + 1)) EQ NULL)
+  {
     tmpMD = (metaData_t *)hashRec->data;
     tmpSb = (struct stat *)&tmpMD->sb;
     tflag = tmpSb->st_mode & S_IFMT;
     printf("- %s [%s]\n",
            (tflag == S_IFDIR)
                ? "d"
-               : (tflag == S_IFBLK)
-                     ? "blk"
-                     : (tflag == S_IFREG)
-                           ? "f"
-                           : (tflag == S_IFCHR)
-                                 ? "chr"
-                                 :
+           : (tflag == S_IFBLK)
+               ? "blk"
+           : (tflag == S_IFREG)
+               ? "f"
+           : (tflag == S_IFCHR)
+               ? "chr"
+           :
 #ifndef MINGW
-                                 (tflag == S_IFSOCK)
-                                     ? "sok"
-                                     : (tflag == S_IFLNK)
-                                           ? "sl"
-                                           :
+           (tflag == S_IFSOCK)
+               ? "sok"
+           : (tflag == S_IFLNK)
+               ? "sl"
+           :
 #endif
-                                           (tflag == S_IFIFO) ? "fifo" : "???",
+           (tflag == S_IFIFO) ? "fifo"
+                              : "???",
            hashRec->keyString);
   }
 #ifdef DEBUG
@@ -979,13 +1129,15 @@ int findMissingFiles(const struct hashRec_s *hashRec) {
  *
  ****/
 
-char *hash2hex(const unsigned char *hash, char *hashStr, int hLen) {
+char *hash2hex(const unsigned char *hash, char *hashStr, int hLen)
+{
   int i;
   char hByte[3];
   bzero(hByte, sizeof(hByte));
   hashStr[0] = 0;
 
-  for (i = 0; i < hLen; i++) {
+  for (i = 0; i < hLen; i++)
+  {
     snprintf(hByte, sizeof(hByte), "%02x", hash[i] & 0xff);
 #ifdef HAVE_STRNCAT
     strncat(hashStr, hByte, hLen * 2);

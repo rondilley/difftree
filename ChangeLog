@@ -55,3 +55,11 @@
 2018-06-05  Ron Dilley <ron.dilley@uberadmin.com>
 
 	* Fixed hash off-by-one bug
+
+2022-03-01  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Updated hash and parser code, more speed!
+
+2022-03-04  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Multiple excludes on the command line or in a file

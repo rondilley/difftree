@@ -1,8 +1,8 @@
 /****
  *
  * Memory function header file
- * 
- * Copyright (c) 2006-2017, Ron Dilley
+ *
+ * Copyright (c) 2006-2021, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,16 +23,16 @@
 #ifndef MEM_DOT_H
 #define MEM_DOT_H
 
-#define XMALLOC(c)       xmalloc_(c,__FILE__,__LINE__)
-#define XFREE(ptr)       xfree_(ptr,__FILE__,__LINE__)
-#define XFREE_ALL()      xfree_all_(__FILE__,__LINE__)
-#define XMEMSET(s,c,n)   xmemset_(s,c,n,__FILE__,__LINE__)
-#define XMEMCPY(d,s,n)   xmemcpy_(d,s,n,__FILE__,__LINE__)
-#define XREALLOC(s,n)    xrealloc_(s,n,__FILE__,__LINE__)
-#define XSTRDUP(s)       xstrdup_(x,__FILE__,__LINE__)
-#define XSTRCPY(d,s)     xstrcpy_(d,s,__FILE__,__LINE__)
-#define XSTRNCPY(d,s,n)  xstrncpy_(d,s,n,__FILE__,__LINE__)
-#define XMEMCMP(s1,s2,n) xmemcmp_(s1,s2,n,__FILE__,__LINE__)
+#define XMALLOC(c) xmalloc_(c, __FILE__, __LINE__)
+#define XFREE(ptr) xfree_(ptr, __FILE__, __LINE__)
+#define XFREE_ALL() xfree_all_(__FILE__, __LINE__)
+#define XMEMSET(s, c, n) xmemset_(s, c, n, __FILE__, __LINE__)
+#define XMEMCPY(d, s, n) xmemcpy_(d, s, n, __FILE__, __LINE__)
+#define XREALLOC(s, n) xrealloc_(s, n, __FILE__, __LINE__)
+#define XSTRDUP(s) xstrdup_(x, __FILE__, __LINE__)
+#define XSTRCPY(d, s) xstrcpy_(d, s, __FILE__, __LINE__)
+#define XSTRNCPY(d, s, n) xstrncpy_(d, s, n, __FILE__, __LINE__)
+#define XMEMCMP(s1, s2, n) xmemcmp_(s1, s2, n, __FILE__, __LINE__)
 
 /****
  *
@@ -60,7 +60,7 @@
 
 #define MEM_D_STAT_DIRTY 0
 #define MEM_D_STAT_CLEAN 1
-#define MEM_D_STAT_DE    2
+#define MEM_D_STAT_DE 2
 
 /****
  *
@@ -68,7 +68,8 @@
  *
  ****/
 
-struct Mem_s {
+struct Mem_s
+{
   void *buf_ptr;
   unsigned int buf_size;
   int status;
@@ -83,16 +84,23 @@ struct Mem_s {
  ****/
 
 char *copy_argv(char *argv[]);
-void *xmalloc_( int size, const char *filename, const int linenumber );
-void *xrealloc_( void *ptr, int size, const char *filename, const int linenumber);
-void *xmemset_( void *ptr, const char value, const int size, const char *filename, const int linenumber );
-void *xmemcpy_( void *d_ptr, void *s_ptr, const int size, const char *filename, const int linenumber );
-int xmemcmp_(const void *s1, const void *s2, size_t n, const char *filename, const int linenumber );
-void xfree_( void *ptr, const char *filename, const int linenumber );
-void xfree_all_( const char *filename, const int linenumber );
-char *xstrdup_( const char *str, const char *filename, const int linenumber );
-void xgrow_( void **old, int elementSize, int *oldCount, int newCount, char *filename, const int linenumber );
-char *xstrcpy_( char *d_ptr, const char *s_ptr, const char *filename, const int linenumber );
-char *xstrncpy_( char *d_ptr, const char *s_ptr, const size_t len, const char *filename, const int linenumber );
+void *xmalloc_(int size, const char *filename, const int linenumber);
+void *xrealloc_(void *ptr, int size, const char *filename,
+                const int linenumber);
+void *xmemset_(void *ptr, const char value, const int size,
+               const char *filename, const int linenumber);
+void *xmemcpy_(void *d_ptr, void *s_ptr, const int size, const char *filename,
+               const int linenumber);
+int xmemcmp_(const void *s1, const void *s2, size_t n, const char *filename,
+             const int linenumber);
+void xfree_(void *ptr, const char *filename, const int linenumber);
+void xfree_all_(const char *filename, const int linenumber);
+char *xstrdup_(const char *str, const char *filename, const int linenumber);
+void xgrow_(void **old, int elementSize, int *oldCount, int newCount,
+            char *filename, const int linenumber);
+char *xstrcpy_(char *d_ptr, const char *s_ptr, const char *filename,
+               const int linenumber);
+char *xstrncpy_(char *d_ptr, const char *s_ptr, const size_t len,
+                const char *filename, const int linenumber);
 
 #endif /* end of UTIL_DOT_H */
