@@ -13,7 +13,7 @@ comparison tool.
 ## Why use it?
 
 I build dt during a security incident to compare directory
-snapshots on a large SAN.  I attemped to use both tripwire
+snapshots on a large SAN.  I attempted to use both tripwire
 and osiris and neither could complete the comparison of
 directories in a reasonable amount of time.  This tool
 sacrifices absolute comparisons using hashing and databases
@@ -68,7 +68,7 @@ user    0m5.043s
 sys     0m34.487s
 ```
 
-## Implimentation
+## Implementation
 
 The output from dt describes all the detected differences found:
 
@@ -281,7 +281,7 @@ syntax: difftree [options] {dir}|{file} [{dir} ...]
  -E|--exfile {file}   exclude directories listed in {file}
  -h|--help            this info
  -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)
- -p|--preserve        preserve ATIME when hashing files (must have appropriate priviledges)
+ -p|--preserve        preserve ATIME when hashing files (must have appropriate privileges)
  -q|--quick           do quick comparisons only
  -s|--sha256          SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)
  -v|--version         display version information
@@ -333,7 +333,7 @@ it at your own risk.
 
 ## Bugs
 
-I am not a programmer by any strech of the imagination.  I
+I am not a programmer by any stretch of the imagination.  I
 have attempted to remove the obvious bugs and other
 programmer related errors but please keep in mind the first
 sentence.  If you find an issue with code, please send me

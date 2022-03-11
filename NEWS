@@ -60,3 +60,7 @@ Version 1.0.0 (March 4, 2022):
 * Improved exclude functionality
 * Minor memory leak fixed
 * Addressed nftw() uninitilized stat struct
+
+Version 1.0.1 (March 11, 2022):
+
+* Minor cleanups of documentation

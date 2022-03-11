@@ -432,7 +432,7 @@ PRIVATE void print_help(void)
   fprintf(stderr, " -E|--exfile {file}   exclude directories listed in {file}\n");
   fprintf(stderr, " -h|--help            this info\n");
   fprintf(stderr, " -m|--md5             MD5 hash files and compare (disables -q|--quick and -s|--sha256 modes)\n");
-  fprintf(stderr, " -p|--preserve        preserve ATIME when hashing files (must have appropriate priviledges)\n");
+  fprintf(stderr, " -p|--preserve        preserve ATIME when hashing files (must have appropriate privileges)\n");
   fprintf(stderr, " -q|--quick           do quick comparisons only\n");
   fprintf(stderr, " -s|--sha256          SHA256 hash files and compare (disables -q|--quick and -m|--md5 modes)\n");
   fprintf(stderr, " -v|--version         display version information\n");
@@ -445,7 +445,7 @@ PRIVATE void print_help(void)
   fprintf(stderr, " -E {file}  exclude directories listed in {file}\n");
   fprintf(stderr, " -h         this info\n");
   fprintf(stderr, " -m         MD5 hash files and compare (disables -q and -s modes)\n");
-  fprintf(stderr, " -p         preserve ATIME when hashing files (must have appropriate priviledges)\n");
+  fprintf(stderr, " -p         preserve ATIME when hashing files (must have appropriate privileges)\n");
   fprintf(stderr, " -q         do quick comparisons only\n");
   fprintf(stderr, " -s         SHA256 hash files and compare (disables -q and -m modes)\n");
   fprintf(stderr, " -v         display version information\n");
