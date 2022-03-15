@@ -69,6 +69,17 @@ AC_CANONICAL_HOST
 AC_C_CONST
 AC_PROG_GCC_TRADITIONAL
 
+dnl Checks for cpu type.
+AS_CASE([$host_cpu],
+        [x86_64|aarch64*|mips64*|ppc64*|sparc64],
+        [
+        AC_DEFINE([OS64BIT],1,OS64BIT)
+        ],
+        [i?86|arm*|mips*|ppc*|sparc],
+        [
+        AC_DEFINE([OS32BIT],1,OS32BIT)
+        ])
+
 dnl Checks for OS type.
 case "$host" in
     *-freebsd*)

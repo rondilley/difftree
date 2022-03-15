@@ -122,9 +122,24 @@ int writeRecord2File(const struct hashRec_s *hashRec)
           tmpSb->st_mode >> 3 & S_IRWXO, tmpSb->st_mode & S_IRWXO
 #endif
   );
+
+/* XXX really should set TIME_T_FMT instead */
+#ifdef OPENBSD
+#ifdef OS64BIT
+  fprintf(out, "MTIME=%lld|", tmpSb->st_mtime);
+  fprintf(out, "ATIME=%lld|", tmpSb->st_atime);
+  fprintf(out, "CTIME=%lld|", tmpSb->st_ctime);
+#else
   fprintf(out, "MTIME=%ld|", tmpSb->st_mtime);
   fprintf(out, "ATIME=%ld|", tmpSb->st_atime);
   fprintf(out, "CTIME=%ld|", tmpSb->st_ctime);
+#endif
+#else
+  fprintf(out, "MTIME=%ld|", tmpSb->st_mtime);
+  fprintf(out, "ATIME=%ld|", tmpSb->st_atime);
+  fprintf(out, "CTIME=%ld|", tmpSb->st_ctime);
+#endif
+
   fprintf(out, "INODE=%ld|", (long int)tmpSb->st_ino);
   fprintf(out, "HLINKS=%d|", (int)tmpSb->st_nlink);
 #ifndef MINGW
