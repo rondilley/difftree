@@ -63,3 +63,8 @@
 2022-03-04  Ron Dilley <ron.dilley@uberadmin.com>
 
 	* Multiple excludes on the command line or in a file
+
+2022-03-14  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Minor documentation changes
+	* Porting for for openBSD 64bit

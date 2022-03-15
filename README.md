@@ -312,11 +312,11 @@ The -d option is only useful if dt is compiled with --enable-debug.
 
 I have built and tested dt on the following operating systems:
 
-* Linux (openSUSE v13.2 [32/64bit])
-* Linux (CentOS v7.0 [32/64bit])
+* Linux (RHEL v8.4 [64bit]/CentOS v7.0 [32/64bit])
 * Linux (Ubuntu v18.04.x/20.04.x [64bit])
-* openBSD (v5.7 [i386])
-* FreeBSD (v10.2 [64bit])
+* openBSD (v5.7 [i386]/v7.0 [64bit])
+* FreeBSD (v13 [64bit])
+* debian (v11.2 [64bit])
 * Mac OS/X (Mavericks/Yosemite)
 * Cygwin
 

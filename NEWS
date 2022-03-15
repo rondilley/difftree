@@ -64,3 +64,7 @@ Version 1.0.0 (March 4, 2022):
 Version 1.0.1 (March 11, 2022):
 
 * Minor cleanups of documentation
+
+Version 1.0.2 (March 14, 2022):
+
+* Minor porting for openBSD 64bit
