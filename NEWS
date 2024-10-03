@@ -68,3 +68,7 @@ Version 1.0.1 (March 11, 2022):
 Version 1.0.2 (March 14, 2022):
 
 * Minor porting for openBSD 64bit
+
+Version 1.0.3 (October 2, 2024):
+
+* Added support for Tom Liston PINEAPPLE mode

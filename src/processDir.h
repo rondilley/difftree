@@ -42,14 +42,14 @@
 # include <config.h>
 #endif
 
-#include <sysdep.h>
+#include "../include/sysdep.h"
 
 #ifndef __SYSDEP_H__
 # error something is messed up
 #endif
 
 #include <stdio.h>
-#include <common.h>
+#include "../include/common.h"
 #if ! defined HAVE_FTW  && ! defined HAVE_NFTW
 # include "noftw.h"
 #endif

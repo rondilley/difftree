@@ -43,13 +43,13 @@
 # include <config.h>
 #endif
 
-#include <sysdep.h>
+#include "../include/sysdep.h"
 
 #ifndef __SYSDEP_H__
 # error something is messed up
 #endif
 
-#include <common.h>
+#include "../include/common.h"
 #include <sys/types.h>
 #include <dirent.h>
 #include "mem.h"

@@ -123,6 +123,9 @@ void *xmalloc_(const int size, const char *filename, const int linenumber)
   result = malloc(size);
   if (result EQ NULL)
   {
+#ifdef PINEAPPLE
+    fprintf(stderr, "PINEAPPLE\n");
+#endif
     fprintf(stderr, "out of memory (%d at %s:%d)!\n", size, filename,
             linenumber);
 #ifdef MEM_DEBUG

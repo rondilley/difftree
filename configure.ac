@@ -49,6 +49,13 @@ AC_ARG_ENABLE(showmemdebug,
       CFLAGS="${CFLAGS} -DMEM_DEBUG -DSHOW_MEM_DEBUG"
     ,)
 
+PINEAPPLE="no"
+AC_ARG_ENABLE(pineapple,
+    [  --enable-pineapple      Enable Tom Liston PINEAPPLE mode],
+      PINEAPPLE="yes"
+      CFLAGS="${CFLAGS} -DPINEAPPLE"
+    ,)
+
 GPROF="no"
 AC_ARG_ENABLE(gprof,
     [  --enable-gprof          Enable profiler],
@@ -239,11 +246,11 @@ AC_TYPE_UINT8_T
 AC_STRUCT_TM
 AC_STRUCT_ST_BLOCKS
 AC_TYPE_OFF_T
-AC_TYPE_SIGNAL
 
-AM_CONFIG_HEADER(include/config.h)
+AC_CONFIG_HEADERS([include/config.h])
 AC_PROG_INSTALL
-AC_OUTPUT(Makefile src/Makefile dt.1)
+AC_CONFIG_FILES([Makefile src/Makefile dt.1])
+AC_OUTPUT
 
 BINDIR=`eval echo ${bindir}`; BINDIR=`eval echo ${BINDIR}`;
 MANDIR=`eval echo ${mandir}/${mansubdir}`; MANDIR=`eval echo ${MANDIR}`;

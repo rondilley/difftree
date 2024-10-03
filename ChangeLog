@@ -68,3 +68,7 @@
 
 	* Minor documentation changes
 	* Porting for for openBSD 64bit
+
+2024-10-02  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Added support for Tom Liston PINEAPPLE mode
