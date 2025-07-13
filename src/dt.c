@@ -284,6 +284,15 @@ int main(int argc, char *argv[])
     strncpy(config->hostname, "unknown", MAXHOSTNAMELEN);
   }
 
+  /* sanitize environment for security */
+  sanitize_environment();
+
+#ifdef DEBUG
+  if (config->debug >= 8) {
+    show_environment();
+  }
+#endif
+
   /* setup gracefull shutdown */
   signal(SIGINT, sigint_handler);
   signal(SIGTERM, sigterm_handler);

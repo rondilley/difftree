@@ -300,7 +300,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                  fprintf(stderr, "ERR - Unable to reset ATIME for [%s] %d (%s)\n",
                           fpath, errno, strerror(errno));
               }
             }
@@ -342,7 +342,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n",
+                  fprintf(stderr, "ERR - Unable to reset ATIME for [%s] %d (%s)\n",
                           fpath, errno, strerror(errno));
               }
             }
@@ -393,7 +393,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
               tmp_utimbuf.actime = sb->st_atime;
               tmp_utimbuf.modtime = sb->st_mtime;
               if (utime(fpath, &tmp_utimbuf) != 0)
-                sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
+                fprintf(stderr, "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath,
                         errno, strerror(errno));
             }
 
@@ -466,9 +466,9 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
 #endif
 
 #ifdef HAVE_STRNCAT
-        strncat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
+        strncat(diffBuf, tmpBuf, sizeof(diffBuf) - strlen(diffBuf) - 1);
 #else
-        strlcat(diffBuf, tmpBuf, sizeof(diffBuf) - 1);
+        strlcat(diffBuf, tmpBuf, sizeof(diffBuf));
 #endif
       }
       else
@@ -843,7 +843,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
+                  fprintf(stderr, "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
               }
             }
           }
@@ -885,7 +885,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                 tmp_utimbuf.actime = sb->st_atime;
                 tmp_utimbuf.modtime = sb->st_mtime;
                 if (utime(fpath, &tmp_utimbuf) != 0)
-                  sprintf("ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
+                  fprintf(stderr, "ERR - Unable to reset ATIME for [%s] %d (%s)\n", fpath, errno, strerror(errno));
               }
             }
           }

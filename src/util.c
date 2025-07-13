@@ -45,11 +45,17 @@
 
 PRIVATE char *restricted_environ[] = {
   "IFS= \t\n",
-  "PATH= /bin:/usr/bin",
+  "PATH=/bin:/usr/bin:/usr/local/bin",
+  "SHELL=/bin/sh",
   0
 };
 PRIVATE char *preserve_environ[] = {
   "TZ",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "USER",
+  "HOME",
   0
 };
 
@@ -201,42 +207,143 @@ void sanitize_environment( void ) {
   char *ptr, *value, *var;
   size_t arr_size = 1;
   size_t arr_ptr = 0;
-  size_t len;
+  size_t len, value_len;
   size_t new_size = 0;
+  size_t max_env_len = 32768; /* Maximum length for any environment variable */
 
+  /* Calculate size needed for restricted environment variables */
   for( i = 0; (var = restricted_environ[i]) != 0; i++ ) {
-    new_size += strlen( var ) + 1;
+    len = strlen( var );
+    if (len > max_env_len) {
+      fprintf(stderr, "ERR - Environment variable too long: %s\n", var);
+      continue;
+    }
+    new_size += len + 1;
     arr_size++;
   }
 
+  /* Calculate size needed for preserved environment variables */
   for ( i = 0; (var = preserve_environ[i]) != 0; i++ ) {
     if ( !(value = getenv(var))) continue;
-    new_size += strlen( var ) + strlen( value ) + 2;
+    
+    /* Validate environment variable name and value */
+    len = strlen( var );
+    value_len = strlen( value );
+    
+    if (len == 0 || len > 256 || value_len > max_env_len) {
+      fprintf(stderr, "ERR - Invalid environment variable: %s\n", var);
+      continue;
+    }
+    
+    /* Check for suspicious characters in variable name */
+    for (size_t j = 0; j < len; j++) {
+      if (!isalnum(var[j]) && var[j] != '_') {
+        fprintf(stderr, "ERR - Invalid character in env var name: %s\n", var);
+        goto skip_var;
+      }
+    }
+    
+    /* Check for null bytes and other dangerous characters in value */
+    for (size_t j = 0; j < value_len; j++) {
+      if (value[j] == '\0' || value[j] == '\n' || value[j] == '\r') {
+        fprintf(stderr, "ERR - Dangerous character in env var value: %s\n", var);
+        goto skip_var;
+      }
+    }
+    
+    new_size += len + value_len + 2; /* var + '=' + value + '\0' */
     arr_size++;
+    
+    skip_var:
+    continue;
   }
 
+  /* Allocate memory for new environment */
   new_size += ( arr_size * sizeof( char * ) );
   new_environ = (char **)XMALLOC( new_size );
-  new_environ[arr_size - 1] = 0;
+  XMEMSET(new_environ, 0, new_size);
+  
+  /* Set up pointer to string data area */
   ptr = ( char * )new_environ + (arr_size * sizeof(char *));
+
+  /* Copy restricted environment variables */
   for ( i = 0; ( var = restricted_environ[i] ) != 0; i++ ) {
-    new_environ[arr_ptr++] = ptr;
     len = strlen( var );
+    if (len > max_env_len) continue;
+    
+    new_environ[arr_ptr++] = ptr;
     XMEMCPY( ptr, var, len + 1 );
     ptr += len + 1;
   }
 
+  /* Copy preserved environment variables */
   for ( i = 0; ( var = preserve_environ[i] ) != 0; i++ ) {
     if ( !( value = getenv( var ) ) ) continue;
-    new_environ[arr_ptr++] = ptr;
+    
     len = strlen( var );
+    value_len = strlen( value );
+    
+    /* Re-validate lengths and characters */
+    if (len == 0 || len > 256 || value_len > max_env_len) continue;
+    
+    /* Validate variable name again */
+    int valid = 1;
+    for (size_t j = 0; j < len; j++) {
+      if (!isalnum(var[j]) && var[j] != '_') {
+        valid = 0;
+        break;
+      }
+    }
+    if (!valid) continue;
+    
+    /* Validate value again */
+    for (size_t j = 0; j < value_len; j++) {
+      if (value[j] == '\0' || value[j] == '\n' || value[j] == '\r') {
+        valid = 0;
+        break;
+      }
+    }
+    if (!valid) continue;
+    
+    new_environ[arr_ptr++] = ptr;
+    
+    /* Copy variable name */
     XMEMCPY( ptr, var, len );
-    *(ptr + len + 1 ) = '=';
-    XMEMCPY( ptr + len + 2, value, strlen( value ) + 1 );
-    ptr += len + strlen( value ) + 2;
+    ptr += len;
+    
+    /* Add equals sign */
+    *ptr = '=';
+    ptr++;
+    
+    /* Copy value */
+    XMEMCPY( ptr, value, value_len + 1 );
+    ptr += value_len + 1;
   }
 
+  /* Null terminate the environment array */
+  new_environ[arr_ptr] = NULL;
+  
+  /* Replace global environment */
   environ = new_environ;
+}
+
+/****
+ *
+ * show environment for debugging
+ *
+ ****/
+
+void show_environment( void ) {
+  extern char **environ;
+  char **env = environ;
+  int count = 0;
+  
+  printf("DEBUG - Sanitized environment variables:\n");
+  while (*env) {
+    printf("DEBUG - ENV[%d]: %s\n", count++, *env);
+    env++;
+  }
+  printf("DEBUG - Total environment variables: %d\n", count);
 }
 
 /****

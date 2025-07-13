@@ -68,6 +68,22 @@ AC_ARG_ENABLE(gprof,
       fi
     ],)
 
+HARDENING="yes"
+AC_ARG_ENABLE(hardening,
+    [  --disable-hardening     Disable security hardening flags],
+    [ if test "$enableval" = "no"; then
+          HARDENING="no"
+      fi
+    ],)
+
+STATIC_ANALYSIS="yes"
+AC_ARG_ENABLE(static-analysis,
+    [  --disable-static-analysis Disable static analysis integration],
+    [ if test "$enableval" = "no"; then
+          STATIC_ANALYSIS="no"
+      fi
+    ],)
+
 dnl ############# System Dependencies
 
 AC_MSG_CHECKING([for special system dependencies])
@@ -247,6 +263,128 @@ AC_STRUCT_TM
 AC_STRUCT_ST_BLOCKS
 AC_TYPE_OFF_T
 
+dnl ############## Security Hardening
+
+if test "$HARDENING" = "yes"; then
+  if test "$GCC" = "yes"; then
+    AC_MSG_CHECKING([for compiler security hardening support])
+    
+    dnl Stack protection
+    HARDENING_CFLAGS="-fstack-protector-strong"
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -fstack-clash-protection"
+    
+    dnl Position Independent Code
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -fPIC"
+    
+    dnl Format string protection
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -Wformat -Wformat-security"
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -Werror=format-security"
+    
+    dnl Buffer overflow detection
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -D_FORTIFY_SOURCE=2"
+    
+    dnl Control flow integrity (GCC 8+)
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -fcf-protection=full"
+    
+    dnl Additional security warnings
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -Wall -Wextra"
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -Warray-bounds -Wstrict-overflow"
+    HARDENING_CFLAGS="${HARDENING_CFLAGS} -Wno-unused-parameter"
+    
+    dnl Linker hardening
+    HARDENING_LDFLAGS="-Wl,-z,relro -Wl,-z,now"
+    HARDENING_LDFLAGS="${HARDENING_LDFLAGS} -Wl,-z,noexecstack"
+    HARDENING_LDFLAGS="${HARDENING_LDFLAGS} -pie"
+    
+    dnl Test if compiler supports these flags
+    old_CFLAGS="$CFLAGS"
+    old_LDFLAGS="$LDFLAGS"
+    CFLAGS="$CFLAGS $HARDENING_CFLAGS"
+    LDFLAGS="$LDFLAGS $HARDENING_LDFLAGS"
+    
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],
+      [AC_MSG_RESULT([yes])],
+      [AC_MSG_RESULT([no - some flags not supported])
+       CFLAGS="$old_CFLAGS"
+       LDFLAGS="$old_LDFLAGS"
+       dnl Try with basic hardening only
+       CFLAGS="$CFLAGS -fstack-protector -D_FORTIFY_SOURCE=2 -Wall"
+       LDFLAGS="$LDFLAGS -Wl,-z,relro"
+      ])
+  fi
+fi
+
+dnl ############## Static Analysis Tools
+
+if test "$STATIC_ANALYSIS" = "yes"; then
+  AC_MSG_CHECKING([for static analysis tools])
+  
+  dnl Check for cppcheck
+  AC_PATH_PROG([CPPCHECK], [cppcheck], [no])
+  if test "$CPPCHECK" != "no"; then
+    AC_MSG_RESULT([found cppcheck: $CPPCHECK])
+    CPPCHECK_FLAGS="--enable=all --std=c11 --platform=unix64 --inconclusive"
+    CPPCHECK_FLAGS="$CPPCHECK_FLAGS --error-exitcode=1 --inline-suppr"
+    CPPCHECK_FLAGS="$CPPCHECK_FLAGS --suppress=missingIncludeSystem"
+    CPPCHECK_FLAGS="$CPPCHECK_FLAGS --suppress=unusedFunction"
+    AC_SUBST(CPPCHECK_FLAGS)
+    have_cppcheck=yes
+  else
+    have_cppcheck=no
+  fi
+  AM_CONDITIONAL([HAVE_CPPCHECK], [test "$have_cppcheck" = "yes"])
+  
+  dnl Check for clang-tidy
+  AC_PATH_PROG([CLANG_TIDY], [clang-tidy], [no])
+  if test "$CLANG_TIDY" != "no"; then
+    AC_MSG_RESULT([found clang-tidy: $CLANG_TIDY])
+    CLANG_TIDY_FLAGS="--checks=-*,bugprone-*,cert-*,clang-analyzer-*,security-*"
+    CLANG_TIDY_FLAGS="$CLANG_TIDY_FLAGS,readability-*,performance-*"
+    CLANG_TIDY_FLAGS="$CLANG_TIDY_FLAGS,-readability-identifier-length"
+    CLANG_TIDY_FLAGS="$CLANG_TIDY_FLAGS,-readability-function-cognitive-complexity"
+    AC_SUBST(CLANG_TIDY_FLAGS)
+    have_clang_tidy=yes
+  else
+    have_clang_tidy=no
+  fi
+  AM_CONDITIONAL([HAVE_CLANG_TIDY], [test "$have_clang_tidy" = "yes"])
+  
+  dnl Check for scan-build (clang static analyzer)
+  AC_PATH_PROG([SCAN_BUILD], [scan-build], [no])
+  if test "$SCAN_BUILD" != "no"; then
+    AC_MSG_RESULT([found scan-build: $SCAN_BUILD])
+    SCAN_BUILD_FLAGS="--status-bugs -analyze-headers"
+    SCAN_BUILD_FLAGS="$SCAN_BUILD_FLAGS -enable-checker security"
+    SCAN_BUILD_FLAGS="$SCAN_BUILD_FLAGS -enable-checker alpha.security"
+    AC_SUBST(SCAN_BUILD_FLAGS)
+    have_scan_build=yes
+  else
+    have_scan_build=no
+  fi
+  AM_CONDITIONAL([HAVE_SCAN_BUILD], [test "$have_scan_build" = "yes"])
+  
+  dnl Check for splint
+  AC_PATH_PROG([SPLINT], [splint], [no])
+  if test "$SPLINT" != "no"; then
+    AC_MSG_RESULT([found splint: $SPLINT])
+    SPLINT_FLAGS="+posixlib +unixlib -nullpass -mustfreefresh"
+    SPLINT_FLAGS="$SPLINT_FLAGS -temptrans -kepttrans -freshtrans"
+    SPLINT_FLAGS="$SPLINT_FLAGS -nullret -nullstate -compdestroy"
+    AC_SUBST(SPLINT_FLAGS)
+    have_splint=yes
+  else
+    have_splint=no
+  fi
+  AM_CONDITIONAL([HAVE_SPLINT], [test "$have_splint" = "yes"])
+  
+  if test "$CPPCHECK" = "no" && test "$CLANG_TIDY" = "no" && test "$SCAN_BUILD" = "no" && test "$SPLINT" = "no"; then
+    AC_MSG_RESULT([no static analysis tools found])
+    STATIC_ANALYSIS="no"
+  else
+    AC_MSG_RESULT([static analysis tools configured])
+  fi
+fi
+
 AC_CONFIG_HEADERS([include/config.h])
 AC_PROG_INSTALL
 AC_CONFIG_FILES([Makefile src/Makefile dt.1])
@@ -269,5 +407,7 @@ echo ""
 echo "Enable debugging      : ${DEBUG}"
 echo "Enable mem debugging  : ${MEM_DEBUG}"
 echo "Show mem debugging    : ${SHOW_MEM_DEBUG}"
+echo "Security hardening    : ${HARDENING}"
+echo "Static analysis       : ${STATIC_ANALYSIS}"
 echo "-----------------------------------------------"
 echo ""

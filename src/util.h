@@ -73,6 +73,7 @@ int create_pid_file( const char *filename );
 static int safe_open( const char *filename );
 static void cleanup_pid_file( const char *filename );
 void sanitize_environment( void );
+void show_environment( void );
 
 #endif /* end of UTIL_DOT_H */
 
