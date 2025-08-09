@@ -227,7 +227,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
   XMEMSET(tmpBuf, 0, sizeof(tmpBuf));
   XMEMSET(diffBuf, 0, sizeof(diffBuf));
 
-  if (strlen(fpath) <= compDirLen)
+  if (strlen(fpath) <= (size_t)compDirLen)
   {
     /* ignore the root */
     return (FTW_CONTINUE);
@@ -282,7 +282,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                          (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++)
+                for (i = 0; i < (int)rCount; i++)
                 {
                   if (rBuf[i] EQ '\n')
                     lCount++;
@@ -323,7 +323,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                          (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++)
+                for (i = 0; i < (int)rCount; i++)
                 {
                   if (rBuf[i] EQ '\n')
                     lCount++;
@@ -821,7 +821,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                   printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++)
+                for (i = 0; i < (int)rCount; i++)
                 {
                   if (rBuf[i] EQ '\n')
                     lCount++;
@@ -863,7 +863,7 @@ int processRecord(const char *fpath, const struct stat *sb, char mode, unsigned 
                   printf("DEBUG - Read [%ld] bytes from [%s]\n", (long int)rCount, fpath + compDirLen);
 #endif
                 tCount += rCount;
-                for (i = 0; i < rCount; i++)
+                for (i = 0; i < (int)rCount; i++)
                 {
                   if (rBuf[i] EQ '\n')
                     lCount++;

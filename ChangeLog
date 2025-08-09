@@ -72,3 +72,17 @@
 2024-10-02  Ron Dilley <ron.dilley@uberadmin.com>
 
 	* Added support for Tom Liston PINEAPPLE mode
+
+2025-08-09  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Fixed all compiler warnings for clean builds
+	* Fixed unused variables in dt.c, processDir.c, hash.c, parser.c, fileHandlers.c, mem.c
+	* Fixed implicit fall-through warning in switch statement
+	* Fixed sign comparison warnings  
+	* Fixed parentheses warning in hash.c
+	* Fixed uninitialized variable warnings
+	* Removed unused static function declarations from util.h
+	* Wrapped unused static functions in util.c with #ifdef UNUSED
+	* Fixed debug build compilation errors
+	* Added proper conditional compilation for DEBUG-only variables
+	* Improved code quality and maintainability

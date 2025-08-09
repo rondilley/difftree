@@ -3,7 +3,8 @@ dt_SOURCES = dt.c dt.h processDir.c processDir.h hash.c hash.h parser.c parser.h
 dt_LDADD = -lz
 
 # Static Analysis Targets
-C_SOURCES = dt.c processDir.c hash.c parser.c fileHandlers.c noftw.c mem.c util.c md5.c sha256.c
+# Using non-automake variable name to avoid warnings
+analysis_sources = dt.c processDir.c hash.c parser.c fileHandlers.c noftw.c mem.c util.c md5.c sha256.c
 
 .PHONY: static-analysis cppcheck clang-tidy scan-build splint
 
@@ -31,8 +32,8 @@ if HAVE_CPPCHECK
 	@$(CPPCHECK) $(CPPCHECK_FLAGS) \
 		--xml --xml-version=2 \
 		--output-file=cppcheck-report.xml \
-		$(C_SOURCES) || true
-	@$(CPPCHECK) $(CPPCHECK_FLAGS) $(C_SOURCES) || true
+		$(analysis_sources) || true
+	@$(CPPCHECK) $(CPPCHECK_FLAGS) $(analysis_sources) || true
 	@echo "cppcheck analysis complete. Report saved to cppcheck-report.xml"
 else
 	@echo "cppcheck not available"
@@ -42,7 +43,7 @@ endif
 clang-tidy:
 if HAVE_CLANG_TIDY
 	@echo "Running clang-tidy..."
-	@for src in $(C_SOURCES); do \
+	@for src in $(analysis_sources); do \
 		echo "Analyzing $$src..."; \
 		$(CLANG_TIDY) $(CLANG_TIDY_FLAGS) $$src -- $(CPPFLAGS) $(CFLAGS) || true; \
 	done
@@ -66,7 +67,7 @@ endif
 splint:
 if HAVE_SPLINT
 	@echo "Running splint..."
-	@for src in $(C_SOURCES); do \
+	@for src in $(analysis_sources); do \
 		echo "Analyzing $$src..."; \
 		$(SPLINT) $(SPLINT_FLAGS) $(CPPFLAGS) $$src || true; \
 	done

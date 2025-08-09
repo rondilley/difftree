@@ -70,8 +70,6 @@ int display( int level, char *format, ... );
 int open_devnull( int fd );
 int is_dir_safe( const char *dir );
 int create_pid_file( const char *filename );
-static int safe_open( const char *filename );
-static void cleanup_pid_file( const char *filename );
 void sanitize_environment( void );
 void show_environment( void );
 

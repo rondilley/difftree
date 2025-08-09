@@ -82,7 +82,6 @@ int writeRecord2File(const struct hashRec_s *hashRec)
   struct stat *tmpSb;
   char tmpBuf[1024];
   int tflag;
-  struct tm *tmPtr;
 
   tmpMD = (metaData_t *)hashRec->data;
   tmpSb = (struct stat *)&tmpMD->sb;
@@ -174,8 +173,8 @@ int writeDirHash2File(const struct hash_s *dirHash, const char *base,
                       const char *outFile)
 {
   struct stat sb;
-  int tflag;
   struct tm *tmPtr;
+  int tflag;
 
   if (lstat(outFile, &sb) EQ 0)
   {
@@ -229,7 +228,7 @@ int loadFile(const char *fName)
 {
   FILE *inFile;
   char inBuf[8192];
-  int i, ret, fileVersion;
+  int fileVersion;
 
   if ((inFile = fopen(fName, "r")) EQ NULL)
   {
@@ -318,15 +317,15 @@ int loadV1File(FILE *inFile)
   char keyString[MAXPATHLEN + 1];
   char startDate[128];
   char hByte[3];
-  char *strPtr;
   unsigned char digest[32]; /* MD5 */
   struct stat sb;
   size_t count = 0, rCount;
-  int i, dPos, lPos, ret, tflag;
-  int tMon = 0, tDay = 0, tYear = 0, tHour = 0, tMin = 0, tSec = 0, tType = 0,
+  int i, dPos, lPos, ret;
+  int tType = 0,
       tPerm = 0;
-  struct tm tmb;
+#ifdef DEBUG
   struct tm *tmPtr;
+#endif
 
   XMEMSET(hByte, 0, sizeof(hByte));
   XMEMSET(inBuf, 0, sizeof(inBuf));
@@ -869,15 +868,15 @@ int loadV1File_old(FILE *inFile)
   char keyString[MAXPATHLEN + 1];
   char startDate[128];
   char hByte[3];
-  char *strPtr;
   unsigned char digest[32]; /* MD5 */
   struct stat sb;
   size_t count = 0, rCount;
-  int i, dPos, lPos, ret, tflag;
-  int tMon = 0, tDay = 0, tYear = 0, tHour = 0, tMin = 0, tSec = 0, tType = 0,
+  int i, dPos, lPos, ret;
+  int tType = 0,
       tPerm = 0;
-  struct tm tmb;
+#ifdef DEBUG
   struct tm *tmPtr;
+#endif
 
   XMEMSET(hByte, 0, sizeof(hByte));
   XMEMSET(inBuf, 0, sizeof(inBuf));
@@ -1384,7 +1383,7 @@ int loadV2File(FILE *inFile)
 {
   char inBuf[8192];
   int inNum;
-  int i, ret, fileVersion;
+  int ret;
 
   /* DIFFTREE preamble */
   if (fscanf(inFile, "VER=%d\n", &inNum) != 1)
@@ -1423,7 +1422,7 @@ int loadExclusions(char *fName)
 {
   FILE *inFile;
   char inBuf[MAXPATHLEN + 1];
-  int i, ret, len;
+  int i, len;
   char **tmpExclPtr;
 
   /* exclude a specific directory from the diff */

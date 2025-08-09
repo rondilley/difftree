@@ -90,7 +90,6 @@ AC_MSG_CHECKING([for special system dependencies])
 
 AC_CANONICAL_HOST
 AC_C_CONST
-AC_PROG_GCC_TRADITIONAL
 
 dnl Checks for cpu type.
 AS_CASE([$host_cpu],

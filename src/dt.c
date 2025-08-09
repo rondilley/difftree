@@ -33,6 +33,10 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#ifdef DEBUG
+void show_info(void);
+#endif
+
 /****
  *
  * local variables
@@ -74,16 +78,7 @@ extern char **environ;
 
 int main(int argc, char *argv[])
 {
-  PRIVATE int pid = 0;
-  PRIVATE int c = 0, i = 0, fds = 0, status = 0;
-  int digit_optind = 0;
-  PRIVATE struct passwd *pwd_ent;
-  PRIVATE struct group *grp_ent;
-  PRIVATE char **ptr;
-  char *tmp_ptr = NULL;
-  char *pid_file = NULL;
-  char *user = NULL;
-  char *group = NULL;
+  PRIVATE int c = 0, i = 0;
   char **tmpExclPtr = NULL;
 
 #ifdef LINUX
@@ -109,7 +104,6 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-    int this_option_optind = optind ? optind : 1;
 #ifdef HAVE_GETOPT_LONG
     int option_index = 0;
     static struct option long_options[] = {
@@ -139,6 +133,7 @@ int main(int argc, char *argv[])
     case 'a':
       /* enable atime change reporting */
       config->show_atime = TRUE;
+      /* fall through */
 
     case 'p':
       if (config->uid != 0)
@@ -397,6 +392,7 @@ int main(int argc, char *argv[])
  *
  ****/
 
+#ifdef DEBUG
 void show_info(void)
 {
   fprintf(stderr, "%s v%s [%s - %s]\n", PROGNAME, VERSION, __DATE__, __TIME__);
@@ -408,6 +404,7 @@ void show_info(void)
   fprintf(stderr, "See the GNU General Public License for details.\n");
   fprintf(stderr, "\n");
 }
+#endif
 
 /*****
  *

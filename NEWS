@@ -72,3 +72,11 @@ Version 1.0.2 (March 14, 2022):
 Version 1.0.3 (October 2, 2024):
 
 * Added support for Tom Liston PINEAPPLE mode
+
+Version 1.0.5 (August 9, 2025):
+
+* Fixed all compiler warnings for clean compilation
+* Fixed debug build errors when using --enable-debug
+* Improved code quality by addressing unused variables and functions
+* Enhanced conditional compilation for DEBUG-specific code
+* Improved maintainability and reduced technical debt

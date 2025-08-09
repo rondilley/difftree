@@ -100,7 +100,6 @@
 
 int main(int argc, char *argv[]);
 PRIVATE void cleanup( void );
-PRIVATE void show_info( void );
 PRIVATE void print_version( void );
 PRIVATE void print_help( void );
 void sigint_handler( int signo );

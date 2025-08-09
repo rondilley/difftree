@@ -102,20 +102,12 @@ void deInitParser(void)
 
 int parseLine(char *line)
 {
-	int curFormPos = 0;
 	int curLinePos = 0;
 	int startOfField = 0;
 	int curFieldType = FIELD_TYPE_UNDEF;
 	int runLen = 0;
-	int i;
-	char *posPtr;
-	char *key = NULL;
 	char *endPtr;
-	long tmpOffset;
-	long offsetList[1024];
 	int fieldPos = 0;
-	int offsetPos = 0;
-	long tmpLongNum = 0;
 	int positionStatus = LHS;
 	int inQuotes = FALSE;
 	int lineLen = strlen(line);

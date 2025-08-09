@@ -160,6 +160,7 @@ int is_dir_safe( const char *dir ) {
  *
  ****/
 
+#ifdef UNUSED
 static int safe_open( const char *filename ) {
   int fd;
   struct stat sb;
@@ -182,6 +183,7 @@ static int safe_open( const char *filename ) {
 
   return (fd);
 }
+#endif
 
 /****
  *
@@ -189,11 +191,13 @@ static int safe_open( const char *filename ) {
  *
  ****/
 
+#ifdef UNUSED
 static void cleanup_pid_file( const char *filename ) {
   if ( strlen( filename ) > 0 ) {
     unlink( filename );
   }
 }
+#endif
 
 /****
  *

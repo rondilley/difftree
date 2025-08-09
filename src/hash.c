@@ -71,7 +71,6 @@ extern Config_t *config;
 uint32_t calcHash(uint32_t hashSize, const char *keyString)
 {
   int32_t val = 0;
-  const char *ptr;
   int i, tmp, keyLen = strlen(keyString) + 1;
 
 #ifdef DEBUG
@@ -238,13 +237,13 @@ struct hashRec_s *addUniqueHashRec(struct hash_s *hash, const char *keyString, i
 {
   uint32_t key;
   int32_t val = 0;
-  const char *ptr;
-  char oBuf[4096];
-  char nBuf[4096];
-  int i, tmp, ret, cmpLen, low, high;
+  int i, tmp, ret, low, high;
   register int mid;
   struct hashRec_s **tmpHashArrayPtr;
-  struct hashRec_s *tmpHashRecPtr;
+  struct hashRec_s *tmpHashRecPtr = NULL;
+#ifdef DEBUG
+  char nBuf[4096];
+#endif
 
   if (keyLen EQ 0)
     keyLen = strlen(keyString) + 1;
@@ -418,12 +417,12 @@ int insertUniqueHashRec(struct hash_s *hash, struct hashRec_s *hashRec)
 {
   uint32_t key;
   int32_t val = 0;
-  const char *ptr;
-  char oBuf[4096];
-  char nBuf[4096];
-  int i, tmp, ret, cmpLen, low, high;
+  int i, tmp, ret, low, high;
   register int mid;
   struct hashRec_s **tmpHashArrayPtr;
+#ifdef DEBUG
+  char nBuf[4096];
+#endif
 
   /* generate the lookup hash */
   for (i = 0; i < hashRec->keyLen; i++)
@@ -553,7 +552,7 @@ struct hashRec_s *getHashRecord(struct hash_s *hash, const char *keyString, int 
 {
   uint32_t key;
   int32_t val = 0;
-  int i, tmp, ret, cmpLen, low, high;
+  int i, tmp, ret, low, high;
   register int mid;
 
   if (keyLen EQ 0)
@@ -860,7 +859,7 @@ void *deleteHashRecord(struct hash_s *hash, const char *keyString, int keyLen)
 {
   uint32_t key;
   int32_t val = 0;
-  int i, tmp, ret, low, high, cmpLen;
+  int i, tmp, ret, low, high;
   register int mid;
   void *tmpDataPtr;
 
@@ -1192,7 +1191,7 @@ char *hexConvert(const char *keyString, int keyLen, char *buf,
 {
   int i;
   char *ptr = buf;
-  for (i = 0; i < keyLen & i < (bufLen / 2) - 1; i++)
+  for (i = 0; (i < keyLen) && (i < (bufLen / 2) - 1); i++)
   {
     snprintf(ptr, bufLen, "%02x", keyString[i] & 0xff);
     ptr += 2;
@@ -1211,7 +1210,6 @@ char *utfConvert(const char *keyString, int keyLen, char *buf,
                  const int bufLen)
 {
   int i;
-  char *ptr = buf;
   /* XXX should check for buf len */
   for (i = 0; i < (keyLen / 2); i++)
   {

@@ -977,7 +977,7 @@ char *xstrcpy_(char *d_ptr, const char *s_ptr, const char *filename, const int l
 
 char *xstrncpy_(char *d_ptr, const char *s_ptr, const size_t len, const char *filename, const int linenumber)
 {
-  char *result;
+  char *result = d_ptr;
   PRIVATE int size;
 #ifdef MEM_DEBUG
   PRIVATE struct Mem_s *mem_ptr;
@@ -1026,7 +1026,7 @@ char *xstrncpy_(char *d_ptr, const char *s_ptr, const size_t len, const char *fi
   }
 
   /* check if source string lenght >= length arg */
-  if (size >= len)
+  if (size >= (int)len)
   {
 #ifdef SHOW_MEM_DEBUG
     fprintf(stderr, "strncpy called with source string >= length arg at %s:%d\n", filename, linenumber);

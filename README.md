@@ -270,8 +270,8 @@ mt[2022/03/11@01:16:39->2022/03/11@10:13:15] sl [/root/dt/root_dir.current]
 dt comes with a minimal set of options as follows:
 
 ```
-% dt --help
-dt v1.0.4 [Jul 12 2025 - 17:01:17]
+% ./dt --help
+dt v1.0.5 [Aug  9 2025 - 14:36:18]
 
 syntax: difftree [options] {dir}|{file} [{dir} ...]
  -a|--atime           show last access time changes (enables -p|--preserve)
