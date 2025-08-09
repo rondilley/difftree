@@ -271,7 +271,7 @@ dt comes with a minimal set of options as follows:
 
 ```
 % dt --help
-dt v1.0.1 [Mar 10 2022 - 18:12:06]
+dt v1.0.4 [Jul 12 2025 - 17:01:17]
 
 syntax: difftree [options] {dir}|{file} [{dir} ...]
  -a|--atime           show last access time changes (enables -p|--preserve)
